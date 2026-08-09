@@ -1,0 +1,148 @@
+# Warehouse Optimization Methodology
+
+## Overview
+
+This document describes the warehouse utilization analytics and optimization recommendations for RetailSync AI.
+
+**Data Source:** Latest inventory snapshot (2025-08-08)
+**Warehouses:** 5
+**Products:** 50
+**Output:** `data/processed/warehouse_optimization.csv`
+
+---
+
+## Key Metrics
+
+### Warehouse Utilization
+
+| Warehouse | Capacity (m³) | Occupied (m³) | Utilization % | Risk |
+|---|---|---|---|---|
+| WH01 | 7,504 | 1,239.87 | 16.52% | LOW |
+| WH02 | 7,967 | 1,305.80 | 16.39% | LOW |
+| WH03 | 19,527 | 1,179.54 | 6.04% | LOW |
+| WH04 | 7,786 | 1,575.62 | 20.24% | LOW |
+| WH05 | 6,122 | 808.58 | 13.21% | LOW |
+
+**Average Utilization:** 14.5%
+**Total Capacity:** 48,906 m³
+**Total Occupied:** 6,109 m³
+
+---
+
+## Utilization Classification
+
+### Thresholds
+- **HIGH:** > 80% utilization — Capacity risk, potential stockouts
+- **MEDIUM:** 50-80% utilization — Balanced, monitor closely
+- **LOW:** < 50% utilization — Underutilized, optimization opportunity
+
+### Current Status
+- **HIGH utilization:** 0 warehouses
+- **MEDIUM utilization:** 0 warehouses
+- **LOW utilization:** 5 warehouses (100%)
+
+**Finding:** All warehouses are significantly underutilized. This indicates either:
+1. Excess warehouse capacity relative to inventory needs
+2. Low inventory levels across the network
+3. Opportunity to consolidate operations
+
+---
+
+## Warehouse Clustering Integration
+
+| Warehouse | Cluster Label | Utilization | Recommendation |
+|---|---|---|---|
+| WH01 | Balanced | 16.52% | Maintain current operations |
+| WH02 | Overstocked | 16.39% | Run promotions or reduce incoming orders |
+| WH03 | Underutilized | 6.04% | Redirect inventory from high-utilization warehouses |
+| WH04 | Balanced | 20.24% | Maintain current operations |
+| WH05 | High-Utilization | 13.21% | Consider expansion or overflow to other warehouses |
+
+**Note:** The "High-Utilization" label for WH05 is based on clustering characteristics, not absolute utilization percentage. In this dataset, all warehouses have low absolute utilization, but WH05 has relatively higher throughput.
+
+---
+
+## Performance Metrics
+
+### Inventory Turnover
+
+| Warehouse | Total Quantity | Total Sold | Turnover Ratio |
+|---|---|---|---|
+| WH01 | 5,562 | 179,087 | 32.20 |
+| WH02 | 5,935 | 183,317 | 30.89 |
+| WH03 | 5,346 | 177,953 | 33.29 |
+| WH04 | 6,361 | 199,502 | 31.36 |
+| WH05 | 3,901 | 136,687 | 35.04 |
+
+**Interpretation:** High turnover ratios indicate fast inventory movement. All warehouses show strong turnover, suggesting efficient operations despite low absolute utilization.
+
+---
+
+## Optimization Recommendations
+
+### Immediate Actions
+1. **WH03 (Underutilized):** Consider consolidating inventory from other warehouses to reduce operational costs.
+2. **WH02 (Overstocked):** Run promotions on slow-moving products or reduce incoming orders.
+3. **WH05 (High-Utilization):** Monitor closely; if utilization increases, consider expansion.
+
+### Strategic Actions
+1. **Capacity Review:** Evaluate whether all 5 warehouses are needed given current utilization levels.
+2. **Network Redesign:** Consider consolidating to 3-4 warehouses to reduce fixed costs.
+3. **Inventory Positioning:** Use clustering results to optimize product placement across warehouses.
+
+### Cost Optimization
+- **Potential Savings:** Consolidating 2 underutilized warehouses could save ~$200K-500K annually in rent, utilities, and staffing.
+- **Risk:** Consolidation increases transportation distance to stores; model total cost before deciding.
+
+---
+
+## Mathematical Formulas
+
+### Utilization %
+```
+utilization_pct = (occupied_volume_m3 / capacity_m3) * 100
+```
+
+### Turnover Ratio
+```
+turnover_ratio = total_quantity_sold / average_quantity_on_hand
+```
+
+### Optimization Potential
+```
+optimization_potential = 
+  (target_utilization - current_utilization) / 100
+  where target = 50% for underutilized, 80% for overutilized
+```
+
+---
+
+## Limitations
+
+1. **Single snapshot:** Analysis uses one inventory snapshot. Temporal trends would provide better insights.
+
+2. **Static capacity:** Warehouse capacities are fixed. Dynamic capacity (e.g., overflow yards) is not modeled.
+
+3. **No transportation costs:** Optimizing for warehouse utilization alone may increase last-mile delivery costs.
+
+4. **Simplistic thresholds:** Utilization thresholds (50%, 80%) are standard heuristics, not optimized for this specific network.
+
+5. **No demand forecasting integration:** Future demand projections are not incorporated into capacity planning.
+
+---
+
+## Reproducibility
+
+```bash
+# Run warehouse optimization
+python src/clustering/warehouse_optimization.py
+```
+
+**Outputs:**
+- `data/processed/warehouse_optimization.csv` — Full analysis for 5 warehouses
+- `data/processed/warehouse_optimization_summary.csv` — Summary statistics
+- `database/retailsync.db` — `warehouse_optimization` table
+
+---
+
+*Generated by `src/clustering/warehouse_optimization.py`*

@@ -1,0 +1,64 @@
+{
+  "forecasting": {
+    "best_model": "Baseline Mean",
+    "test_mae": 4.09,
+    "test_rmse": 6.65,
+    "forecast_horizon": "14 days",
+    "total_forecasted_demand": 18541,
+    "total_forecasted_revenue": 4807527.16
+  },
+  "inventory": {
+    "total_product_stores": 500,
+    "stockout_high": 16,
+    "stockout_medium": 169,
+    "overstock_high": 110,
+    "urgent_reorder": 185,
+    "dead_stock": 0
+  },
+  "anomalies": {
+    "total_anomalies": 31619,
+    "anomaly_rate_pct": 8.66,
+    "demand_spikes": 28292,
+    "unusual_patterns": 3327
+  },
+  "segmentation": {
+    "product_clusters": {
+      "k": 2,
+      "silhouette": 0.234,
+      "labels": {
+        "Slow-Moving": 27,
+        "High-Volume / Stable": 9,
+        "Low-Volume / Volatile": 7,
+        "High-Volume / Volatile": 4,
+        "Medium-Volume / Moderate": 3
+      }
+    },
+    "store_clusters": {
+      "k": 2,
+      "silhouette": 0.337,
+      "labels": {
+        "High-Performance": 3,
+        "Low-Performance": 3,
+        "Stable Performance": 2,
+        "High-Variability": 2
+      }
+    },
+    "warehouse_clusters": {
+      "k": 4,
+      "silhouette": 0.826,
+      "labels": {
+        "Balanced": 16,
+        "Overstocked": 8,
+        "Underutilized": 8,
+        "High-Utilization": 8
+      }
+    }
+  },
+  "warehouse": {
+    "total_warehouses": 5,
+    "total_capacity_m3": 48906.0,
+    "avg_utilization_pct": 14.48,
+    "high_utilization": 0,
+    "low_utilization": 5
+  }
+}

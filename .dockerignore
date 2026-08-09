@@ -1,0 +1,60 @@
+# Git files
+.git
+.gitignore
+README.md
+LICENSE
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+env/
+venv/
+.venv/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (mount as volume instead)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Models (mount as volume instead)
+models/*
+!models/.gitkeep
+
+# Database (mount as volume instead)
+database/*.db
+database/*.sqlite
+
+# Notebooks
+notebooks/
+*.ipynb
+
+# Documentation build
+docs/_build
+
+# Test artifacts
+.pytest_cache
+.coverage
+htmlcov
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.log
