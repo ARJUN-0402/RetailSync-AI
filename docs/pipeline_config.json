@@ -1,7 +1,7 @@
 {
   "pipeline_name": "RetailSync AI",
   "version": "2.0.0",
-  "created_at": "2026-08-26T15:10:51.007976+00:00",
+  "created_at": "2026-08-26T15:20:38.605197+00:00",
   "data_source": "Synthetic retail data with realistic demand patterns",
   "date_range": "2023-08-11 to 2025-08-09",
   "train_end": "2024-12-31",
@@ -9,16 +9,16 @@
   "test_end": "2025-08-09",
   "forecast_horizon_days": 14,
   "models": {
-    "demand_forecaster": "RandomForest (91.1s) (Test Set)",
+    "demand_forecaster": "RandomForest (99.4s) (Test Set)",
     "product_clusterer": "K-Means (auto K)",
     "store_clusterer": "K-Means (auto K)",
     "warehouse_clusterer": "K-Means (auto K)"
   },
   "metrics": {
-    "demand_forecasting_mae": 4.6507,
-    "demand_forecasting_rmse": 8.2882,
-    "demand_forecasting_r2": 0.2227,
-    "demand_forecasting_smape": 46.84
+    "demand_forecasting_mae": 4.6482,
+    "demand_forecasting_rmse": 8.2912,
+    "demand_forecasting_r2": 0.2222,
+    "demand_forecasting_smape": 46.83
   },
   "outputs": {
     "features": "data/processed/features_daily.csv",

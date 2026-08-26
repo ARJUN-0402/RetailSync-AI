@@ -1,6 +1,6 @@
 # RetailSync AI - End-to-End Pipeline Summary
 
-**Generated:** 2026-08-26 15:10:53
+**Generated:** 2026-08-26 15:20:41
 
 ## Pipeline Overview
 
@@ -26,12 +26,12 @@ RetailSync AI is an end-to-end retail supply chain analytics platform that combi
 
 ### Demand Forecasting
 
-- **Best model:** RandomForest (91.1s) (Test Set)
-- **Test MAE:** 4.6507
-- **Test RMSE:** 8.2882
-- **Test R²:** 0.2227
-- **Test sMAPE:** 46.84%
-- **14-day forecast:** 69,411 units, $16,125,040.53
+- **Best model:** RandomForest (99.4s) (Test Set)
+- **Test MAE:** 4.6482
+- **Test RMSE:** 8.2912
+- **Test R²:** 0.2222
+- **Test sMAPE:** 46.83%
+- **14-day forecast:** 69,465 units, $16,128,461.84
 
 ### Inventory Intelligence
 
@@ -87,7 +87,7 @@ Raw Data -> Cleaning -> SQLite Database -> Feature Engineering -> ML Models -> P
 
 | Model | File | Type |
 |-------|------|------|
-| Demand Forecaster | `models/demand_forecaster.pkl` | RandomForest (91.1s) (Test Set) |
+| Demand Forecaster | `models/demand_forecaster.pkl` | RandomForest (99.4s) (Test Set) |
 | Product Clusterer | `models/product_clusterer.pkl` | K-Means |
 | Store Clusterer | `models/store_clusterer.pkl` | K-Means |
 | Warehouse Clusterer | `models/warehouse_clusterer.pkl` | K-Means |

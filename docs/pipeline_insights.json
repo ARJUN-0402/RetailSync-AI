@@ -1,13 +1,13 @@
 {
   "forecasting": {
-    "best_model": "RandomForest (91.1s) (Test Set)",
-    "test_mae": 4.650718739744095,
-    "test_rmse": 8.28820573017373,
-    "test_r2": 0.22272780608429965,
-    "test_smape": 46.84139514589615,
+    "best_model": "RandomForest (99.4s) (Test Set)",
+    "test_mae": 4.648192453434353,
+    "test_rmse": 8.291204587329586,
+    "test_r2": 0.22216523559618329,
+    "test_smape": 46.83149508638318,
     "forecast_horizon": "14 days",
-    "total_forecasted_demand": 69411,
-    "total_forecasted_revenue": 16125040.530000001
+    "total_forecasted_demand": 69465,
+    "total_forecasted_revenue": 16128461.84
   },
   "inventory": {
     "total_product_stores": 500,
