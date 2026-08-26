@@ -7,7 +7,6 @@ including KPI cards, section headers, alerts, charts, tables, and filters.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -680,12 +679,12 @@ def render_data_table(
         render_empty_state("No Data", "No records match the current filters.")
         return
 
-    st.dataframe(
-        df,
-        use_container_width=True,
-        height=height,
-        column_config=column_config,
-    )
+    kwargs: dict[str, Any] = {}
+    if height is not None:
+        kwargs["height"] = height
+    if column_config is not None:
+        kwargs["column_config"] = column_config
+    st.dataframe(df, width="stretch", **kwargs)
 
     if download_label and download_filename:
         csv = df.to_csv(index=False).encode("utf-8")

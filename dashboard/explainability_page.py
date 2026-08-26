@@ -19,7 +19,6 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
     render_alert,
     render_kpi_card,
@@ -61,7 +60,7 @@ def render_explainability_page(models: dict, data: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Model Explainability</div>
         <div class="brand-subtitle">Understand what drives the demand forecasts (SHAP)</div>
         """,

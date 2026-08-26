@@ -14,18 +14,28 @@ services:
       - ./models:/app/models
       - ./database:/app/database
       - ./docs:/app/docs
+      - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_PORT=8501
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - APP_ENV=production
+      - LOG_LEVEL=INFO
+      - RETAILSYNC_AI_OFFLINE_MODE=true
     healthcheck:
-      test: ["CMD", "python", "-c", "import streamlit; print('OK')"]
+      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, 'src'); from health import get_health_status; import json; status = get_health_status(); print(json.dumps(status)); sys.exit(0 if status['status'] in ('healthy', 'degraded') else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     networks:
       - retailsync-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 512m
 
 networks:
   retailsync-network:

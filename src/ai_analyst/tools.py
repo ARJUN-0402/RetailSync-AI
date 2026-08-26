@@ -14,6 +14,8 @@ from typing import Any
 import pandas as pd
 from sqlalchemy import create_engine
 
+from .exceptions import ToolExecutionError
+
 logger = logging.getLogger(__name__)
 
 _project_root = os.path.dirname(
@@ -459,7 +461,14 @@ def get_warehouse_performance(
 def get_executive_kpis() -> dict[str, Any]:
     try:
         from src.business_metrics.config import BusinessConfig
-        from src.business_metrics.kpi import compute_executive_kpis
+        from src.business_metrics.kpi import (
+            compute_executive_kpis,
+            compute_forecast_accuracy,
+            compute_inventory_carrying_cost,
+            compute_overstock_value,
+            compute_potential_revenue_protected,
+            compute_stockout_cost,
+        )
         from src.business_metrics.reorder import generate_reorder_recommendations
 
         inv_intel = _load_csv("inventory_intelligence.csv")
@@ -472,7 +481,7 @@ def get_executive_kpis() -> dict[str, Any]:
         overstock = compute_overstock_value(inv_intel, products, config) if not inv_intel.empty else {}
         carrying = compute_inventory_carrying_cost(inv_intel, products, config) if not inv_intel.empty else {}
         revenue = compute_potential_revenue_protected(stockout, overstock, config)
-        reorder_df = generate_reorder_recommendations(inv_intel, products, forecasts, suppliers, config) if not inv_intel.empty else pd.DataFrame()
+        _reorder_df = generate_reorder_recommendations(inv_intel, products, forecasts, suppliers, config) if not inv_intel.empty else pd.DataFrame()
 
         features = _load_csv("features_daily.csv")
         model_pkg = None
@@ -600,8 +609,32 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     if name not in TOOL_REGISTRY:
         raise ToolExecutionError(f"Unknown tool: {name}")
     func = TOOL_REGISTRY[name]
+    validated_args: dict[str, Any] = {}
+    for key, value in arguments.items():
+        if key in ("product_id", "store_id", "warehouse_id") and value is not None:
+            validated_args[key] = str(value).strip()
+        elif key == "days" and value is not None:
+            validated_args[key] = max(1, min(int(value), 365))
+        elif key == "limit" and value is not None:
+            validated_args[key] = max(1, min(int(value), 1000))
+        elif key == "risk_level" and value is not None:
+            validated_args[key] = str(value).strip().upper()
+        elif key == "urgency" and value is not None:
+            validated_args[key] = str(value).strip().upper()
+        elif key == "category" and value is not None:
+            validated_args[key] = str(value).strip()
+        elif key == "anomaly_type" and value is not None:
+            validated_args[key] = str(value).strip()
+        elif key == "cluster_label" and value is not None:
+            validated_args[key] = str(value).strip()
+        elif key == "capacity_risk" and value is not None:
+            validated_args[key] = str(value).strip().upper()
+        else:
+            validated_args[key] = value
     try:
-        result = func(**arguments)
+        result = func(**validated_args)
         return result
+    except ToolExecutionError:
+        raise
     except Exception as exc:
         raise ToolExecutionError(f"Tool {name} failed: {exc}") from exc

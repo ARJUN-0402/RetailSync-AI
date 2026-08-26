@@ -1,492 +1,628 @@
 # RetailSync AI
 
-## AI-Powered Retail Demand Forecasting & Supply Chain Intelligence Platform
+> **AI-Powered Retail Demand Forecasting & Supply-Chain Intelligence Platform**
 
-![Python](https://img.shields.io/badge/Python-3.13-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.58-red)
-![SQLite](https://img.shields.io/badge/SQLite-3-blue)
-![Scikit-learn](https://img.shields.io/badge/Scikit--learn-1.9-orange)
-![XGBoost](https://img.shields.io/badge/XGBoost-3.3-green)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.39%2B-red?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-2.0%2B-00B4D8)](https://xgboost.ai/)
+[![Scikit-learn](https://img.shields.io/badge/Scikit--learn-1.5%2B-F7931E?logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Pandas](https://img.shields.io/badge/Pandas-2.2%2B-150458?logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![Plotly](https://img.shields.io/badge/Plotly-5.24%2B-239120?logo=plotly&logoColor=white)](https://plotly.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI](https://github.com/ARJUN-0402/RetailSync-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/ARJUN-0402/RetailSync-AI/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> An end-to-end retail analytics platform combining demand forecasting, inventory intelligence, anomaly detection, segmentation, and warehouse analytics into an interactive Streamlit dashboard.
+**RetailSync AI** is an end-to-end machine learning platform that turns raw retail
+operations data into demand forecasts, inventory-risk signals, anomaly alerts,
+customer/store/warehouse segments, and an interactive decision-support dashboard —
+augmented by a retrieval-augmented (RAG) AI analyst that answers business questions
+in natural language.
+
+🔗 **Repository:** [github.com/ARJUN-0402/RetailSync-AI](https://github.com/ARJUN-0402/RetailSync-AI)
 
 ---
 
-## Business Problem
+## 📋 Table of Contents
 
-Retailers face persistent supply-chain challenges that directly impact profitability: inaccurate demand forecasts lead to both stockouts (lost sales) and overstock (carrying costs), while dead inventory ties up capital indefinitely. Unusual demand patterns go undetected until they cause problems, and warehouse capacity is often invisible until it is too late. Operational data is fragmented across inventory systems, point-of-sale logs, and supplier records, making holistic decision-making difficult.
-
-RetailSync AI addresses these challenges through a unified data science pipeline that generates synthetic retail data with realistic patterns, engineers 74 time-safe features, compares forecasting approaches, detects inventory risks, identifies demand anomalies, segments business entities, and analyzes warehouse utilization — all surfaced through an interactive dark-themed dashboard.
-
+- [What is RetailSync AI?](#what-is-retailsync-ai)
+- [Why it matters](#why-it-matters)
+- [Business problem](#business-problem)
+- [Key capabilities](#key-capabilities)
+- [Visualizations](#visualizations)
+- [Live demo](#live-demo)
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Machine learning methodology](#machine-learning-methodology)
+- [Model performance](#model-performance)
+- [Explainability (SHAP)](#explainability-shap)
+- [Business KPIs](#business-kpis)
+- [AI Analyst](#ai-analyst)
+- [Project structure](#project-structure)
+- [Installation](#installation)
+- [Local development](#local-development)
+- [Docker](#docker)
+- [Environment variables](#environment-variables)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Project limitations](#project-limitations)
+- [Roadmap](#roadmap)
+- [Author](#author)
+- [License](#license)
 
 ---
 
-## Key Capabilities
+## What is RetailSync AI?
 
-### Demand Forecasting
+RetailSync AI is a portfolio-grade data-science application that demonstrates a
+complete, production-shaped ML pipeline:
 
-Compares multiple forecasting approaches on daily product-store demand with time-based train/validation/test splits and time-aware validation:
+**Data → Preprocessing → Feature Engineering → ML Models → Business Intelligence →
+SQLite Persistence → Streamlit Dashboard → AI Analyst**
 
-- **Historical Mean** (baseline)
-- **Naive** (last-known value)
-- **Moving Average** (7-day rolling window)
-- **Random Forest** (100 trees, max depth 15)
-- **XGBoost** (100 trees, max depth 8)
+It covers the full retail analytics lifecycle — from a synthetic but realistic
+point-of-sale and inventory dataset, through 68 engineered time-series features and
+a benchmarked forecasting model, to inventory risk, anomaly detection, K-Means
+segmentation, warehouse utilization, and a multi-page Streamlit dashboard. A RAG
+layer over the project's own documentation and data tools lets stakeholders ask
+plain-English questions ("Which products are overstocked?", "Why is demand expected
+to rise next week?").
 
-Evaluation metrics: MAE, RMSE, R², sMAPE. The best-performing approach is selected and used to generate 14-day forward forecasts.
+The project emphasizes **honest evaluation**: model selection is automatic and
+metric-driven, every KPI is computed from real artifacts (not hard-coded), and
+limitations (e.g. synthetic data, zero-inflation) are documented openly.
 
-### Inventory Intelligence
+## Why it matters
 
-Rule-based risk detection for every product-store combination at the latest inventory snapshot:
+Retailers lose revenue to two opposite failure modes: **stockouts** (missed sales)
+and **overstock** (tied-up capital, holding cost, obsolescence). Both are driven by
+poor demand visibility. RetailSync AI shows how modern ML tooling addresses this:
 
-- **Stockout risk** (HIGH / MEDIUM / LOW) — based on current inventory vs. reorder point and forecasted demand
-- **Overstock risk** (HIGH / MEDIUM / LOW) — based on inventory relative to max stock level and demand variability
-- **Dead stock** — high inventory with zero recent demand or zero coefficient of variation
-- **Reorder urgency** (URGENT / SOON / MONITOR / NONE) — based on coverage days and reorder point proximity
-- **Composite risk score** (0–100) — weighted combination of all risk dimensions with actionable recommendations
+- Forecast future demand at the product–store–day level (14-day horizon).
+- Quantify stockout and overstock exposure with configurable cost models.
+- Surface unusual demand patterns automatically (spikes, drops, multivariate outliers).
+- Segment products, stores, and warehouses to tailor strategy.
+- Explain model predictions to non-technical stakeholders with SHAP.
+- Let managers query the system conversationally via an LLM-powered analyst.
 
-### Anomaly Detection
+---
 
-Ensemble detection combining three complementary methods:
+## Business problem
 
-- **Rolling Z-score** — univariate spikes and drops relative to a 30-day rolling mean/std
-- **IQR method** — distribution-based outlier detection per product-store
-- **Isolation Forest** — multivariate anomaly detection on aggregate product-store features
+| Problem | How RetailSync AI addresses it |
+|---------|-------------------------------|
+| **Demand forecasting** | Benchmarks baselines vs. Random Forest / XGBoost on a time-based split; produces 14-day product–store forecasts. |
+| **Stockouts** | Inventory intelligence flags HIGH/MEDIUM stockout risk and computes urgent reorder recommendations with safety stock + lead time. |
+| **Overstock** | Detects overstock risk (HIGH/MEDIUM) and quantifies excess inventory value above configured ceilings. |
+| **Anomaly detection** | Ensemble of Rolling Z-Score + IQR + Isolation Forest flags demand spikes, drops, and unusual multivariate patterns. |
+| **Segmentation** | K-Means groups products, stores, and warehouses into actionable behavioral segments. |
+| **Warehouse intelligence** | Analyzes occupied vs. capacity volume, utilization %, turnover, and capacity risk with recommendations. |
 
-An anomaly is flagged when **2 or more methods agree**, reducing false positives. Each anomaly includes a Z-score, anomaly type (Demand Spike, Demand Drop, Unusual Pattern), and the methods that voted for it.
+---
 
-### Segmentation
+## Key capabilities
 
-K-Means clustering with optimal-K selection via silhouette score for three entity types:
+Implemented and verified in the codebase:
 
-- **Products** (K=2) — segmented by revenue, demand variability, and zero-demand proportion
-- **Stores** (K=2) — segmented by revenue, demand variability, and store type
-- **Warehouses** (K=4) — segmented by utilization, stock coverage, and turnover
+- **Demand forecasting** — compares Historical Mean, Naïve, 7-day Moving Average,
+  Random Forest, and XGBoost; selects the best by validation MAE; generates 14-day forecasts.
+- **Inventory intelligence** — per product–store risk scoring: stockout risk,
+  overstock risk, dead-stock detection, reorder urgency, and a 0–100 composite risk score.
+- **Anomaly detection** — ensemble of Rolling Z-Score, IQR, and Isolation Forest;
+  an anomaly is confirmed when 2+ methods agree.
+- **Segmentation** — K-Means for products, stores, and warehouses with silhouette-based K selection.
+- **Warehouse intelligence** — capacity, utilization, turnover, and capacity-risk analysis.
+- **Explainability** — SHAP (TreeExplainer) global + local feature attribution with
+  auto-generated plain-English explanations.
+- **Business KPIs** — forecast accuracy, inventory carrying cost, stockout cost,
+  overstock value, potential revenue protected, and reorder recommendations.
+- **AI Analyst** — RAG + tool-calling natural-language interface over retail data
+  (OpenAI / Anthropic / Ollama, with an offline rule-based fallback).
+- **Dashboard** — multi-page Streamlit app (Overview, Demand Forecast, Inventory,
+  Anomalies, Segmentation, Warehouse, Data Explorer, Model Performance, AI Analyst, Explainability).
+- **Production hygiene** — centralized config, structured logging with secret
+  redaction, validation, typed exceptions, health checks, Docker, and CI.
 
-Business labels are derived from actual cluster characteristics (e.g., "Slow-Moving", "High-Performance", "Overstocked").
+---
 
-### Warehouse Intelligence
+## Visualizations
 
-Descriptive analytics and recommendation engine for warehouse utilization:
+The repository ships real model-diagnostic figures generated by the clustering
+pipeline (elbow plots used for K selection). Dashboard screenshots are **not**
+committed to the repo; run the app locally to explore the interactive pages.
 
-- Occupied volume and capacity analysis per warehouse
-- Utilization percentage classification (HIGH >80%, MEDIUM 50–80%, LOW <50%)
-- Inventory turnover ratios
-- Capacity risk assessment
-- Actionable recommendations (expand, consolidate, maintain)
+**K-Means elbow analysis (K selection via silhouette + elbow):**
 
-> **Note:** The warehouse module performs descriptive analytics and rule-based recommendations. It does not use a formal optimization algorithm (e.g., linear programming solver).
+| Products | Stores | Warehouses |
+|----------|--------|------------|
+| ![Product clusters](docs/product_cluster_elbow.png) | ![Store clusters](docs/store_cluster_elbow.png) | ![Warehouse clusters](docs/warehouse_cluster_elbow.png) |
 
-### Interactive Dashboard
+*Figures generated by `src/clustering/segmentation.py`.*
 
-A 7-page Streamlit application with a dark enterprise theme:
+---
 
-1. **Executive Overview** — KPI cards, model status, business problem context
-2. **Demand Forecast** — interactive product-store forecast charts with historical comparison
-3. **Inventory Intelligence** — risk distribution pies, critical item table, alert filter
-4. **Demand Anomalies** — anomaly timeline, top anomalous products, anomaly detail table
-5. **Segmentation** — cluster distributions and scatter plots for products, stores, warehouses
-6. **Warehouse Intelligence** — utilization bars, warehouse detail table, recommendations
-7. **Data Explorer** — raw data table viewer for all database tables
+## Live demo
 
-All charts use Plotly for interactivity. All metrics are computed dynamically from CSV files and SQLite — no hardcoded values.
+A hosted live demo is **not currently available**. Run the dashboard locally
+(see [Installation](#installation) and [Local development](#local-development)) —
+it is served at **http://localhost:8501** after `streamlit run dashboard/app.py`.
 
 ---
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    A[Raw Retail Data] --> B[Data Cleaning]
-    B --> C[SQLite Database]
-    C --> D[Feature Engineering]
+flowchart TD
+    A[Raw Retail Data<br/>sales, inventory, products,<br/>stores, warehouses, suppliers] --> B[Data Generation & Ingestion<br/>generate_dataset.py / ingest.py]
+    B --> C[(SQLite Database<br/>SQLAlchemy ORM)]
+    C --> D[Feature Engineering<br/>feature_engineering.py<br/>68 time-series features]
     D --> E[ML Models]
-    E --> F[Predictions]
-    F --> G[Inventory Intelligence]
-    F --> H[Anomaly Detection]
-    D --> I[Segmentation]
-    I --> J[Warehouse Intelligence]
-    G --> K[Streamlit Dashboard]
-    H --> K
-    I --> K
-    J --> K
+    D --> S[Segmentation<br/>K-Means]
+    E --> F[Demand Forecaster<br/>Random Forest / XGBoost / baselines]
+    E --> G[Anomaly Detection<br/>Z-Score + IQR + Isolation Forest]
+    F --> H[14-Day Forecasts]
+    H --> I[Inventory Intelligence<br/>stockout / overstock / reorder]
+    G --> J[Anomaly Flags]
+    S --> K[Warehouse Intelligence]
+    I --> L[Business Metrics Engine<br/>KPIs, carrying cost, revenue protected]
+    J --> L
+    K --> L
+    C --> M[(SQLite Persistence<br/>alerts, segments, anomalies)]
+    L --> N[Streamlit Dashboard<br/>10 interactive pages]
+    F --> O[Explainability<br/>SHAP global + local]
+    O --> N
+    N --> P[AI Analyst<br/>RAG + tool calling + LLM]
+    L --> P
 ```
 
-### Pipeline Layers
+*Layers mirror the layered design in `docs/architecture.md` (Data → Feature →
+Model → Intelligence → Presentation) with an added explainability and AI-analyst tier.*
 
-| Layer | Components |
-|-------|-----------|
-| **Data Layer** | `generate_dataset.py`, `ingest.py` — synthetic data generation and cleaning |
-| **Feature Layer** | `feature_engineering.py` — 74 features (lags, rolling stats, time features, inventory, targets) |
-| **Model Layer** | `demand_forecaster.py` — forecasting model training; `segmentation.py` — K-Means clusterers |
-| **Intelligence Layer** | `forecast_pipeline.py`, `inventory_intelligence.py`, `anomaly_detection.py`, `warehouse_optimization.py` |
-| **Presentation Layer** | `dashboard/app.py` — 7-page Streamlit UI |
+---
 
-### Data Flow
+## Technology stack
 
+| Category | Technologies |
+|----------|--------------|
+| **Languages** | Python 3.11+ |
+| **ML** | Scikit-learn, XGBoost, Statsmodels, SHAP |
+| **Data** | Pandas, NumPy, SQLAlchemy |
+| **Visualization** | Plotly, Matplotlib |
+| **App** | Streamlit |
+| **Database** | SQLite (SQLAlchemy ORM) |
+| **Model serialization** | Joblib |
+| **AI / LLM** | OpenAI, Anthropic, Ollama (via RAG + tool-calling) |
+| **DevOps / CI** | Docker, Docker Compose, GitHub Actions |
+| **Testing / Lint** | pytest, ruff |
+
+---
+
+## Machine learning methodology
+
+### Data source & generation
+A reproducible synthetic dataset is generated by `src/data/generate_dataset.py`
+(realistic but fictional — see [Limitations](#project-limitations)):
+
+- **50 products**, **10 stores**, **8 suppliers**, **5 warehouses**
+- **730 days** of history (2023-08-11 → 2025-08-09)
+- **365,000** daily product–store sales records and **52,500** inventory snapshots
+- Ingested and validated into a 12-table SQLite database (`src/database/init_db.py`)
+
+### Preprocessing & feature engineering
+`src/features/feature_engineering.py` builds **68 predictive features** per
+product–store–day observation with **time-safe** (leakage-free) logic:
+
+- Lag features (1d, 7d, 14d, 28d)
+- Rolling statistics (7d, 14d, 28d)
+- Expanding statistics
+- Cyclical time features
+- Price & promotion features
+- Inventory features
+- Demand-variability features
+- Forecast targets (1d / 7d / 14d ahead)
+
+### Train / validation / test strategy
+A strict **time-based split** prevents leakage:
+
+| Split | Date range | Rows | Purpose |
+|-------|------------|------|---------|
+| Train | ≤ 2024-12-31 | 254,500 | Model training |
+| Validation | 2025-01-01 → 2025-06-09 | 80,000 | Hyperparameter / model selection |
+| Test | 2025-06-10 → 2025-08-09 | 30,500 | Final evaluation |
+
+### Models evaluated
+Baselines (Historical Mean, Naïve, 7-day Moving Average) and ML models
+(Random Forest: 100 trees / max_depth 15; XGBoost: 100 estimators / max_depth 8).
+
+### Evaluation metrics
+MAE, RMSE, R², and sMAPE. MAE on the validation set is the primary selection
+criterion; per-product / per-store / per-category breakdowns are also produced.
+
+### Model selection
+The model with the **lowest validation MAE** is automatically selected and
+serialized to `models/demand_forecaster.pkl`. On the current dataset this is
+**Random Forest** (see [Model performance](#model-performance)).
+
+---
+
+## Model performance
+
+### Model comparison (validation set, current dataset)
+
+| Model | MAE ↓ | RMSE ↓ | R² | sMAPE (%) |
+|-------|------:|-------:|---:|----------:|
+| Historical Mean (baseline) | 5.9054 | 10.4848 | -0.0748 | 53.44 |
+| Naïve (previous day) | 6.4587 | 12.1243 | -0.4372 | 53.92 |
+| Moving Average (7-day) | 5.0153 | 9.1597 | 0.1797 | 43.58 |
+| XGBoost | 4.7685 | 8.8419 | 0.2356 | 41.41 |
+| **Random Forest (selected)** | **4.6660** | **8.7103** | **0.2582** | **41.24** |
+
+### Selected model — test-set performance
+
+| Metric | Value |
+|--------|------:|
+| Model | Random Forest (100 trees, max_depth 15) |
+| Test MAE | 4.6482 |
+| Test RMSE | 8.2912 |
+| Test R² | 0.2222 |
+| Test sMAPE | 46.83% |
+| Forecast horizon | 14 days (product–store–day) |
+| 14-day forecast volume | ~69,465 units |
+| 14-day forecast revenue | ~$16.13M |
+
+> **Honest note:** model selection is data-dependent and driven by validation MAE.
+> The dataset is heavily zero-inflated (~80%+ of daily product–store demand is zero),
+> which keeps absolute accuracy modest; the ML models still beat every baseline on
+> MAE/RMSE/R²/sMAPE. Aggregating to weekly/monthly horizons or using zero-inflated
+> models would improve performance (see [Roadmap](#roadmap)).
+
+### Top features (Random Forest importance)
+
+| Rank | Feature | Importance |
+|------|---------|----------:|
+| 1 | `demand_rolling_median_28d` | 55.6% |
+| 2 | `demand_expanding_mean` | 3.4% |
+| 3 | `category_avg_demand` | 1.9% |
+| 4 | `demand_expanding_std` | 1.5% |
+| 5 | `store_type_avg_demand` | 1.4% |
+
+*Source: `docs/feature_importance.csv` (generated by the forecaster).*
+
+---
+
+## Explainability (SHAP)
+
+The `src/explainability/` module adds a training-agnostic SHAP layer
+(`shap.TreeExplainer` for tree models) that answers three questions:
+
+1. **Global** — which features drive demand predictions overall (mean \|SHAP\| ranking + beeswarm).
+2. **Local** — why a *specific* forecast is what it is (per-feature SHAP + waterfall).
+3. **Directional** — auto-generated plain-English explanation built from real feature
+   values vs. background median (no hard-coded text).
+
+It reuses the trained `models/demand_forecaster.pkl`, never retrains, and degrades
+gracefully if SHAP or the model is missing. Exposed both on the **Model
+Explainability** page and as a "Why this forecast?" panel on the Demand Forecast page.
+
+---
+
+## Business KPIs
+
+All KPIs are computed live from data artifacts by `src/business_metrics/` (no
+hard-coded values). Definitions follow the implementation:
+
+| KPI | What it computes | Basis |
+|-----|------------------|-------|
+| **Forecast accuracy** | MAE, RMSE, sMAPE, bias on the test set; per-product/store/category breakdowns | `kpi.compute_forecast_accuracy` |
+| **Inventory carrying cost** | `total_inventory_value × carrying_cost_pct × (period/365)` | `kpi.compute_inventory_carrying_cost` |
+| **Stockout cost** | Estimated lost revenue & cost from HIGH/MEDIUM stockout-risk items | `kpi.compute_stockout_cost` |
+| **Overstock value** | Excess units above `max_stock_level` × cost price | `kpi.compute_overstock_value` |
+| **Potential revenue protected** | Avoided stockout revenue + recovered overstock margin (× confidence) | `kpi.compute_potential_revenue_protected` |
+| **Reorder recommendations** | Recommended qty = reorder point − on hand; urgency from coverage days; includes safety stock & lead time | `reorder.generate_reorder_recommendations` |
+
+> Cost/margin assumptions (e.g. 25% annual carrying cost, stockout cost rate, 30%
+> recovered-overstock margin) are **configurable** in `src/business_metrics/config.py`
+> and clearly flagged as estimates in the UI — they are illustrative, not audited figures.
+
+### Current intelligence snapshot (from pipeline artifacts)
+
+| Area | Result |
+|------|-------:|
+| Product–store combinations analyzed | 500 |
+| Stockout risk (HIGH / MEDIUM) | 10 / 21 |
+| Overstock risk (HIGH) | 58 |
+| Urgent reorders | 31 |
+| Anomalies detected | 13,522 (3.7%) — 12,433 spikes, 1,089 unusual patterns |
+| Warehouses analyzed | 5 (avg utilization 55.4%, capacity 49,835 m³) |
+
+---
+
+## AI Analyst
+
+`src/ai_analyst/` adds a **read-only** natural-language layer on top of the data and models:
+
+```mermaid
+flowchart LR
+    Q[User question] --> O[Orchestrator]
+    O --> R[RAG Retriever<br/>keyword search over docs/]
+    O --> T[Tools<br/>read-only data access]
+    T --> D[(SQLite + processed CSVs)]
+    O --> L[LLM Provider<br/>OpenAI / Anthropic / Ollama]
+    L --> A[Answer grounded in data + docs]
 ```
-data/raw/*.csv
-    --> [ingest.py]
-data/processed/*.csv
-    --> [init_db.py]
-database/retailsync.db
-    --> [feature_engineering.py]
-data/processed/features_daily.csv  (365,000 rows × 74 columns)
-    --> [demand_forecaster.py]
-models/demand_forecaster.pkl
-    --> [forecast_pipeline.py]
-data/processed/forecasts_next_14d.csv  (7,000 rows)
-    --> [inventory_intelligence.py] + [anomaly_detection.py] + [segmentation.py] + [warehouse_optimization.py]
-    --> SQLite tables (inventory_alerts, anomaly_flags, product_segments, etc.)
-    --> [dashboard/app.py]
+
+- **RAG**: retrieves top-k documentation chunks (`docs/*.md`) and injects them as context.
+- **Tools** (12 read-only): `get_sales_trends`, `get_forecasts`, `get_inventory_snapshot`,
+  `get_stockout_risks`, `get_overstock_risks`, `get_anomalies`, `get_product_segments`,
+  `get_store_segments`, `get_warehouse_performance`, `get_executive_kpis`,
+  `get_reorder_recommendations`, `get_forecast_explanation`.
+- **Providers**: OpenAI (`gpt-4o-mini` default), Anthropic, Ollama; **offline mode**
+  falls back to rule-based summaries when no LLM key is set.
+- The analyst is strictly read-only and never modifies inventory or data.
+
+---
+
+## Project structure
+
+```text
+RetailSync-AI/
+├── .github/workflows/ci.yml        # Lint + test (py3.11–3.13) + Docker build
+├── dashboard/
+│   ├── app.py                      # Streamlit entrypoint
+│   ├── business_intelligence.py
+│   ├── explainability_page.py
+│   ├── components/ui.py
+│   └── pages/                      # overview, demand_forecast, inventory,
+│                                   # anomalies, segmentation, warehouse,
+│                                   # data_explorer, model_performance, ai_analyst
+├── src/
+│   ├── config.py  exceptions.py  health.py
+│   ├── ai_analyst/                # orchestrator, retriever, tools, prompts, config
+│   ├── anomaly/                   # anomaly_detection.py
+│   ├── business_metrics/          # kpi, reorder, config, utils
+│   ├── clustering/                # segmentation, warehouse_optimization
+│   ├── data/                      # generate_dataset, ingest
+│   ├── database/                  # init_db
+│   ├── explainability/            # shap_explainer, explanation, visualizations, ...
+│   ├── features/                  # feature_engineering
+│   ├── forecasting/               # demand_forecaster, forecast_pipeline
+│   ├── inventory/                 # inventory_intelligence, load_alerts
+│   ├── models/                    # baselines
+│   ├── pipeline/                  # run_pipeline (validation/reports)
+│   └── utils/                     # validation, logging
+├── data/raw/  data/processed/     # inputs + pipeline outputs
+├── models/                        # serialized .pkl artifacts
+├── database/                      # schema.sql, queries.sql, retailsync.db
+├── docs/                          # methodology, architecture, elbow plots
+├── tests/                         # pytest suites
+├── notebooks/                     # EDA notebooks + outputs
+├── logs/  Dockerfile  docker-compose.yml
+├── requirements.txt  pyproject.toml  .env.example  README.md  LICENSE
 ```
-
----
-
-## Results
-
-### Demand Forecasting
-
-| Metric | Value |
-|--------|-------|
-| Best Model | Baseline Mean (historical average) |
-| Test MAE | 4.31 units |
-| Test RMSE | 7.20 units |
-| Test R² | -0.0076 |
-| Test sMAPE | 186.93% |
-| Forecast Horizon | 14 days |
-| Total Forecasted Demand | 15,820 units |
-| Total Forecasted Revenue | $4,089,393 |
-
-**Key technical finding:** The baseline mean performs best on the validation set due to high zero-inflation (81.42% of daily demand values are zero) and low signal-to-noise ratio at daily granularity. Random Forest and XGBoost do not outperform the simple mean on this target. The sMAPE of 186.93% confirms that percentage-based metrics are not meaningful for zero-inflated data — MAE and RMSE are the primary metrics for evaluation.
-
-### Inventory Intelligence
-
-| Metric | Count |
-|--------|-------|
-| Product-Store Combinations | 500 |
-| Stockout HIGH | 16 |
-| Stockout MEDIUM | 169 |
-| Overstock HIGH | 110 |
-| Urgent Reorder | 185 |
-| Dead Stock | 0 |
-
-### Anomaly Detection
-
-| Metric | Value |
-|--------|-------|
-| Total Anomalies | 31,619 (8.66% of daily records) |
-| Demand Spikes | 28,292 |
-| Unusual Patterns | 3,327 |
-| Method | Ensemble (Z-score + IQR + Isolation Forest, 2+ agreement) |
-
-### Segmentation
-
-**Products (K=2, Silhouette=0.234):**
-
-| Label | Count |
-|-------|-------|
-| Slow-Moving | 27 |
-| High-Volume / Stable | 9 |
-| Low-Volume / Volatile | 7 |
-| High-Volume / Volatile | 4 |
-| Medium-Volume / Moderate | 3 |
-
-**Stores (K=2, Silhouette=0.337):**
-
-| Label | Count |
-|-------|-------|
-| High-Performance | 3 |
-| Low-Performance | 3 |
-| Stable Performance | 2 |
-| High-Variability | 2 |
-
-**Warehouses (K=2, Silhouette=0.212):**
-
-| Label | Count |
-|-------|-------|
-| Balanced | 2 |
-| Overstocked | 1 |
-| Underutilized | 1 |
-| High-Utilization | 1 |
-
-### Warehouse Intelligence
-
-| Metric | Value |
-|--------|-------|
-| Total Warehouses | 5 |
-| Total Capacity | 48,906 m³ |
-| Total Occupied | 6,109 m³ |
-| Average Utilization | 14.5% |
-| High Utilization (>80%) | 0 |
-| Low Utilization (<50%) | 5 |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend / ML** | Python 3.13, Pandas 3.0, NumPy 2.4, Scikit-learn 1.9, XGBoost 3.3 |
-| **Database** | SQLite, SQLAlchemy 2.0 |
-| **Visualization** | Plotly 6.8, Matplotlib |
-| **Dashboard** | Streamlit 1.58 |
-| **Model Serialization** | Joblib |
-| **Testing** | pytest (9 test functions, 95 assertions) |
-| **Development** | Git, VS Code |
-
----
-
-## Dataset
-
-RetailSync AI uses a **synthetic retail dataset** generated programmatically to mimic real-world patterns.
-
-| Entity | Count |
-|--------|-------|
-| Products | 50 (6 categories) |
-| Stores | 10 (3 types: Urban, Suburban, Rural) |
-| Suppliers | 8 (varying lead times and reliability) |
-| Warehouses | 5 (different capacities) |
-| Days of History | 730 (2023-08-11 to 2025-08-09) |
-| Sales Records | 69,216 |
-| Inventory Snapshots | 52,500 (weekly) |
-
-### Data Characteristics
-
-| Characteristic | Value |
-|----------------|-------|
-| Zero-inflation | 81.42% of daily demand values are zero |
-| Seasonality | Electronics peaks Nov–Dec (1.3x), Clothing peaks Jun–Aug (1.2x) |
-| Promotions | 15.29% of sales are promotional |
-| Stockouts | 36.6% of inventory snapshots have stock at or below reorder point |
-
----
-
-## How It Works
-
-### 1. Synthetic Data Generation
-
-`src/data/generate_dataset.py` creates realistic retail data using `np.random.seed(42)` for reproducibility:
-
-- **Products:** 50 products across 6 categories (Electronics, Clothing, Groceries, Home Goods, Beauty, Toys) with random prices ($5–$500), costs, weights, volumes, and supplier assignments
-- **Stores:** 10 stores across 10 cities with store types (Urban/Suburban/Rural)
-- **Suppliers:** 8 suppliers with lead times (1–30 days) and reliability scores (0.70–0.99)
-- **Warehouses:** 5 warehouses with capacities ($5,000–$20,000 m³)
-- **Sales:** Daily sales generated per store with 5–15 random products per day, Poisson demand with seasonal and trend factors (Electronics 1.3x in Nov/Dec, Clothing 1.2x in Jun–Aug, linear growth trend)
-- **Inventory:** Weekly snapshots (105 weeks × 500 product-store combos = 52,500 records) with random stock levels
-
-### 2. Data Cleaning
-
-`src/data/ingest.py` validates schemas, detects and fills missing values (median for numeric, mode for categorical), removes duplicates by natural keys, validates dates, and logs IQR outliers.
-
-### 3. Database
-
-`src/database/init_db.py` loads cleaned data into SQLite with 12 tables, foreign key constraints, and 25+ indexes. Referential integrity is validated (0 orphaned records).
-
-### 4. Feature Engineering
-
-`src/features/feature_engineering.py` creates a 365,000-row daily product-store level dataset (500 combos × 730 days) with 74 columns:
-
-- **Lag features** (8): demand and revenue at 1d, 7d, 14d, 28d lags
-- **Rolling features** (12): mean, std, max, min over 7d, 14d, 28d windows (shifted to prevent leakage)
-- **Expanding features** (2): cumulative mean and std
-- **Time features** (12): day-of-week, day-of-month, month, quarter, year, weekend/month-start/end flags, cyclical encodings
-- **Price features** (2): price-vs-cost, margin percentage
-- **Promotion features** (3): current promotion flag, 7d and 14d promotion sums
-- **Inventory features** (7): quantity-on-hand, reorder point, max stock, coverage days, ratios
-- **Demand variability** (2): 28-day coefficient of variation, zero-demand proportion
-- **Aggregate features** (2): category-level and store-type-level average demand
-- **Target variables** (6): 1d, 7d, 14d lookahead for both demand and revenue
-
-### 5. Demand Forecasting
-
-`src/forecasting/demand_forecaster.py` trains and evaluates baseline models and ML models on a time-based split, using `target_demand_1d` as the primary target. `src/forecasting/forecast_pipeline.py` generates 14-day forward forecasts for all 500 product-store combinations.
-
-### 6. Inventory Intelligence
-
-`src/inventory/inventory_intelligence.py` detects stockout, overstock, dead stock, and reorder risks using rule-based logic with documented thresholds. Results are saved to CSV and loaded into the `inventory_alerts` database table via `load_alerts.py`.
-
-### 7. Anomaly Detection
-
-`src/anomaly/anomaly_detection.py` runs three detection methods on the features dataset and combines them via 2-of-3 voting consensus. Results are saved to CSV and the `anomaly_flags` database table.
-
-### 8. Segmentation
-
-`src/clustering/segmentation.py` uses K-Means with silhouette-score optimization for products, stores, and warehouses. Models are serialized to `models/` and labels are assigned based on cluster characteristics.
-
-### 9. Warehouse Intelligence
-
-`src/clustering/warehouse_optimization.py` calculates utilization metrics from the latest inventory snapshot and warehouse capacities, classifies utilization risk, and generates recommendations.
-
-### 10. Pipeline Validation
-
-`src/pipeline/run_pipeline.py` validates that all 10 output files and 4 model artifacts exist, loads them, and generates a summary of key business metrics.
 
 ---
 
 ## Installation
 
 ### Prerequisites
-
-- Python 3.9+
+- Python 3.11+
 - pip
 - Git
+- (optional) Docker + Docker Compose
 
-### Setup
+### Steps
 
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/retailsync-ai.git
-cd retailsync-ai
+# Clone
+git clone https://github.com/ARJUN-0402/RetailSync-AI.git
+cd RetailSync-AI
 
-# Create virtual environment
+# Virtual environment
 python -m venv venv
-# On Windows:
+# Windows:
 venv\Scripts\activate
-# On macOS/Linux:
+# macOS / Linux:
 source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### Environment Variables
-
-Copy `.env.example` to `.env` (optional — the project runs without environment variables, but the template is provided for future configuration):
-
-```bash
-cp .env.example .env
-```
+> **Path note:** several `src/` modules import the top-level `src` package.
+> If you see `ModuleNotFoundError: No module named 'src'`, run the pipeline
+> commands from the repository root with the repo on the path:
+> `export PYTHONPATH=.` (macOS/Linux) or `set PYTHONPATH=.` (Windows),
+> or use `python -m src.<module>.<script>`.
 
 ---
 
-## How to Run
+## Local development
 
-### Full Pipeline
-
-Execute all stages in order:
-
+### 1. Generate & ingest data
 ```bash
-# 1. Generate synthetic data
 python src/data/generate_dataset.py
-
-# 2. Clean and validate data
 python src/data/ingest.py
-
-# 3. Initialize database
 python src/database/init_db.py
+```
 
-# 4. Engineer features
+### 2. Feature engineering
+```bash
 python src/features/feature_engineering.py
+```
 
-# 5. Train forecasting model
+### 3. Train model & generate forecasts
+```bash
 python src/forecasting/demand_forecaster.py
-
-# 6. Generate forecasts
 python src/forecasting/forecast_pipeline.py
+```
 
-# 7. Run inventory intelligence
+### 4. Intelligence layers
+```bash
 python src/inventory/inventory_intelligence.py
 python src/inventory/load_alerts.py
-
-# 8. Run anomaly detection
 python src/anomaly/anomaly_detection.py
-
-# 9. Run clustering
 python src/clustering/segmentation.py
 python src/clustering/warehouse_optimization.py
+```
 
-# 10. Validate pipeline
+Optional end-to-end validation/report:
+```bash
 python src/pipeline/run_pipeline.py
 ```
 
-### Dashboard
-
+### 5. Launch the dashboard
 ```bash
 streamlit run dashboard/app.py
+# Open http://localhost:8501
 ```
 
-Then open http://localhost:8501 in your browser.
+> The dashboard reads from `data/processed/*.csv` and `models/*.pkl`. Run steps 1–4
+> (or `python src/pipeline/run_pipeline.py` after they complete) before launching.
+
+### Configuration
+Centralized in `src/config.py` (database path, data/metadata paths, app settings).
+Copy `.env.example` → `.env` to override (see [Environment variables](#environment-variables)).
+Logs are written to `logs/retailsync.log` with secret redaction.
+
+---
+
+## Docker
+
+### Build & run (single container)
+```bash
+docker build -t retailsync-ai .
+docker run -p 8501:8501 \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/models:/app/models" \
+  -v "$(pwd)/database:/app/database" \
+  retailsync-ai
+```
+
+### Docker Compose
+```bash
+docker-compose up --build
+# Dashboard: http://localhost:8501
+```
+
+The image is multi-stage, runs as a non-root user, and includes a `/health`
+healthcheck (`src/health.py`).
+
+---
+
+## Environment variables
+
+Copy `.env.example` to `.env` and edit as needed. **Never commit `.env`.**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DATABASE_URL` | `sqlite:///database/retailsync.db` | DB connection |
+| `DATABASE_PATH` | `database/retailsync.db` | DB file path |
+| `APP_NAME` / `APP_VERSION` | `RetailSync AI` / `2.0.0` | App metadata |
+| `APP_ENV` / `APP_DEBUG` | `development` / `false` | Runtime mode |
+| `RAW_DATA_PATH` / `PROCESSED_DATA_PATH` | `data/raw` / `data/processed` | Data dirs |
+| `MODELS_PATH` | `models` | Model dir |
+| `STREAMLIT_SERVER_PORT` / `STREAMLIT_SERVER_ADDRESS` | `8501` / `0.0.0.0` | Dashboard bind |
+| `LOG_LEVEL` / `LOG_FILE` | `INFO` / `logs/retailsync.log` | Logging |
+| `RETAILSYNC_AI_API_KEY` | _(empty)_ | LLM provider key |
+| `RETAILSYNC_AI_PROVIDER` | `openai` | `openai` / `anthropic` / `ollama` |
+| `RETAILSYNC_AI_MODEL` | `gpt-4o-mini` | LLM model name |
+| `RETAILSYNC_AI_BASE_URL` | _(empty)_ | Optional proxy / Ollama URL |
+| `RETAILSYNC_AI_OFFLINE_MODE` | `false` | Rule-based fallback if `true` |
+| `RETAILSYNC_AI_DISABLE_TOOLS` | `false` | Disable tool calling |
+| `RETAILSYNC_AI_DISABLE_RAG` | `false` | Disable doc retrieval |
+
+*No secrets are stored in the repository; all keys are supplied via environment.*
 
 ---
 
 ## Testing
 
-The test suite includes 9 test functions (95 assertions) covering data files, database tables, feature engineering, forecasting outputs, inventory intelligence, anomaly detection, clustering, pipeline integration, and dashboard artifacts. Tests are pytest-compatible and also runnable via the custom runner.
-
 ```bash
-pytest tests/test_pipeline.py -v
+# Run the full test suite
+pytest tests/ -v
+
+# Run a single suite
+pytest tests/test_forecasting.py -v
+
+# Coverage
+pytest tests/ --cov=src --cov-report=html
+
+# Lint (matches CI)
+ruff check src/ tests/ dashboard/ --select E,F --ignore E501
 ```
 
-Or equivalently:
+### CI/CD
+GitHub Actions (`.github/workflows/ci.yml`) runs on push/PR:
+1. **Lint** — `ruff` on `src/`, `tests/`, `dashboard/`.
+2. **Test** — `pytest` across Python **3.11, 3.12, 3.13**.
+3. **Build** — validates the Docker image build.
 
-```bash
-python tests/test_pipeline.py
-```
-
-Additional validation scripts:
-
-```bash
-python tests/validate_dashboard_integration.py   # Dashboard data wiring
-python tests/test_dashboard_e2e.py               # End-to-end dashboard KPIs
-python tests/validate_db.py                      # Database inspection
-python tests/validate_features.py                # Data leakage checks
-```
+![CI](https://github.com/ARJUN-0402/RetailSync-AI/actions/workflows/ci.yml/badge.svg)
 
 ---
 
-## Documentation
+## Deployment
 
-| Document | Description |
-|----------|-------------|
-| `docs/engineering_audit.md` | Full architecture and implementation audit |
-| `docs/pipeline_architecture.md` | Pipeline flow and component diagram |
-| `docs/feature_documentation.md` | Feature definitions and engineering logic |
-| `docs/forecasting_methodology.md` | Forecasting approach and model selection |
-| `docs/inventory_methodology.md` | Inventory risk detection logic |
-| `docs/anomaly_methodology.md` | Anomaly detection methods and results |
-| `docs/clustering_methodology.md` | Segmentation approach and interpretation |
-| `docs/warehouse_methodology.md` | Warehouse utilization analysis |
-| `docs/data_dictionary.md` | Table and column reference |
-| `docs/pipeline_summary.md` | End-to-end pipeline summary with metrics |
-| `docs/testing.md` | Test suite documentation and report |
+Tested / supported methods:
+
+- **Local (Python):** run the pipeline, then `streamlit run dashboard/app.py`.
+- **Docker:** `docker build` + `docker run` (or `docker-compose up --build`) as shown above.
+- **Cloud container platforms** (AWS ECS/Fargate, GCP Cloud Run, Azure Container
+  Instances) are documented in `docs/deployment.md` and are compatible with the
+  provided Docker image, but are **not pre-configured** in this repo.
+
+SQLite is used for development; the docs note a PostgreSQL migration path for
+concurrent/multi-user production deployments.
 
 ---
 
-## Limitations
+## Project limitations
 
-1. **Synthetic Data:** All data is programmatically generated. Real-world performance will differ.
-2. **High Zero-Inflation:** 81.42% of daily demand values are zero, limiting forecasting accuracy.
-3. **Baseline Forecasting:** The simple historical mean outperforms ML models due to data sparsity and low signal-to-noise ratio.
-4. **Static Analysis:** All intelligence components operate on historical snapshots, not real-time data.
-5. **No External Features:** No weather, holiday, or market data is included.
-6. **Warehouse Analytics, Not Optimization:** The warehouse module performs descriptive analytics and rule-based recommendations — it does not solve an optimization problem (e.g., capacity-constrained allocation).
-7. **Single-User Dashboard:** Streamlit dashboard is designed for local/single-user use, not multi-user production deployment.
+Documented honestly:
 
----
-
-## Future Work
-
-- Implement zero-inflated forecasting models (hurdle models, N-BEATS, Temporal Fusion Transformers)
-- Add weather, holiday, and macroeconomic features
-- Implement probabilistic forecasting with confidence intervals
-- Add real-time data ingestion (Kafka or similar)
-- Deploy to cloud (AWS/GCP/Azure) with multi-user authentication
-- Implement model monitoring and automated retraining
-- Convert warehouse module to a true optimization problem (linear programming)
-- Modularize dashboard into multi-file app with separate page modules
-- Migrate from SQLite to PostgreSQL for concurrent access
+- **Synthetic data** — the dataset is generated, not real retail transactions; absolute
+  numbers illustrate the pipeline rather than real business outcomes.
+- **Zero-inflation** — ~80%+ of daily product–store demand is zero, which caps
+  achievable accuracy and inflates anomaly counts.
+- **Granularity** — daily product–store forecasting is noisy; weekly/monthly aggregation
+  would improve signal.
+- **No external features** — weather, holidays, promotions context, and local events are
+  not modeled (promotion flags exist but external signals are absent).
+- **Static snapshots** — clustering and warehouse optimization use historical snapshots,
+  not streaming data.
+- **AI/LLM limits** — the analyst is read-only, keyword-based RAG (may miss abstract
+  queries), and offline mode returns rule-based summaries rather than LLM prose.
+- **Cost KPIs are estimates** — carrying/stockout/overstock figures use configurable
+  assumptions and are illustrative, not audited.
 
 ---
 
-## License
+## Roadmap
 
-MIT License — see [LICENSE](LICENSE) for details.
+Future improvements (not yet implemented):
+
+- Replace synthetic data with real retail datasets.
+- Add external features: weather, holidays, promotions, local events.
+- Advanced forecasting: Temporal Fusion Transformers, N-BEATS, LSTM, zero-inflated / hurdle models.
+- Probabilistic forecasting with uncertainty quantification.
+- Richer agentic workflows (multi-step planning, self-correction) for the AI Analyst.
+- Real-time ingestion pipelines (e.g. Kafka / streaming).
+- Cloud auto-scaling, authentication, multi-tenancy, model monitoring & automated retraining (MLflow).
+- Expand dashboard test/visual coverage and add model-version management.
 
 ---
 
 ## Author
 
-RetailSync AI v1.0.0 — AI-Powered Retail Supply Chain Intelligence
+**RetailSync AI** — an AI/ML portfolio project by **ARJUN-0402**.
+
+- GitHub: [@ARJUN-0402](https://github.com/ARJUN-0402)
+- Repository: [RetailSync-AI](https://github.com/ARJUN-0402/RetailSync-AI)
+- Version: 2.0.0
+
+---
+
+## License
+
+Released under the **MIT License** — see the [LICENSE](LICENSE) file for full text.
 
 © 2026 RetailSync AI

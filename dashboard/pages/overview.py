@@ -4,21 +4,20 @@ from __future__ import annotations
 
 import logging
 
-import pandas as pd
-import plotly.express as px
 import streamlit as st
 
 from dashboard.components.ui import (
     COLORS,
     inject_global_css,
     render_alert,
-    render_bar_chart,
+    render_data_table,
+    render_empty_state,
     render_kpi_card,
     render_kpi_row,
     render_pie_chart,
     render_section_header,
 )
-from src.business_metrics.kpi import compute_executive_kpis, compute_forecast_accuracy
+from src.business_metrics.kpi import compute_forecast_accuracy
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ def render_overview_page(data: dict, models: dict, engine) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">RetailSync AI</div>
         <div class="brand-subtitle">AI-Powered Retail Demand Forecasting & Supply Chain Intelligence</div>
         """,

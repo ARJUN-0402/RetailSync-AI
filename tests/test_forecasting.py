@@ -183,7 +183,6 @@ def test_evaluation_metrics():
 
     mae = mean_absolute_error(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    r2 = r2_score(y_true, y_pred)
 
     assert abs(mae - 0.5) < 1e-6, f"MAE mismatch: {mae}"
     assert abs(rmse - 0.5) < 1e-6, f"RMSE mismatch: {rmse}"

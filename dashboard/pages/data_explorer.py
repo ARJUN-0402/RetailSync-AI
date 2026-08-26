@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import logging
 
-import pandas as pd
 import streamlit as st
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
     render_data_table,
     render_empty_state,
@@ -23,7 +21,7 @@ def render_data_explorer_page(data: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Data Explorer</div>
         <div class="brand-subtitle">Browse and download raw data tables</div>
         """,

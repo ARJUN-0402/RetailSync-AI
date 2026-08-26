@@ -22,7 +22,6 @@ from dashboard.components.ui import (
     COLORS,
     inject_global_css,
     render_alert,
-    render_bar_chart,
     render_data_table,
     render_kpi_card,
     render_kpi_row,
@@ -84,7 +83,7 @@ def render_business_intelligence_page(engine, data: dict):
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Business Intelligence</div>
         <div class="brand-subtitle">Financial KPIs, inventory economics, and reorder intelligence</div>
         """,

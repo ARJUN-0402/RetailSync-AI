@@ -1,10 +1,17 @@
+"""Database initialization and management for RetailSync AI."""
+
+from __future__ import annotations
+
+import logging
 import os
 
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-DATABASE_PATH = "database/retailsync.db"
-PROCESSED_DIR = "data/processed"
+from src.config import settings
+from src.exceptions import DatabaseError
+
+logger = logging.getLogger(__name__)
 
 TABLES = {
     "products": "products.csv",
@@ -16,34 +23,54 @@ TABLES = {
 }
 
 
-def create_database():
-    if os.path.exists(DATABASE_PATH):
-        os.remove(DATABASE_PATH)
-        print(f"Removed existing database: {DATABASE_PATH}")
+def create_database(db_path: str | None = None) -> str:
+    """Create the SQLite database schema.
 
-    engine = create_engine(f"sqlite:///{DATABASE_PATH}")
+    Args:
+        db_path: Optional database path override.
+
+    Returns:
+        Database URL string.
+    """
+    path = db_path or settings.database.path
+    logger.info("Creating database at %s", path)
+
+    if os.path.exists(path):
+        os.remove(path)
+        logger.info("Removed existing database: %s", path)
+
+    engine = create_engine(f"sqlite:///{path}")
+    schema_path = os.path.join(str(settings.paths.database), "schema.sql")
     with engine.connect() as conn:
-        with open("database/schema.sql", "r", encoding="utf-8") as f:
+        with open(schema_path, "r", encoding="utf-8") as f:
             schema_sql = f.read()
         statements = [s.strip() for s in schema_sql.split(";") if s.strip()]
         for stmt in statements:
             conn.execute(text(stmt))
         conn.commit()
-        print("Schema created successfully.")
-    return engine
+    logger.info("Schema created successfully")
+    return f"sqlite:///{path}"
 
 
-def load_data(engine):
+def load_data(engine, processed_dir: str | None = None) -> None:
+    """Load processed CSV data into the database.
+
+    Args:
+        engine: SQLAlchemy engine.
+        processed_dir: Optional processed data directory override.
+    """
+    directory = processed_dir or str(settings.paths.processed_data)
     for table_name, filename in TABLES.items():
-        filepath = os.path.join(PROCESSED_DIR, filename)
+        filepath = os.path.join(directory, filename)
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Missing processed file: {filepath}")
+            raise DatabaseError(f"Missing processed file: {filepath}")
         df = pd.read_csv(filepath)
         df.to_sql(table_name, con=engine, if_exists="append", index=False)
-        print(f"Loaded {len(df)} rows into {table_name}")
+        logger.info("Loaded %d rows into %s", len(df), table_name)
 
 
-def validate_relationships(engine):
+def validate_relationships(engine) -> None:
+    """Validate referential integrity of the database."""
     queries = {
         "sales_product_fk": """
             SELECT COUNT(*) as orphan_sales
@@ -93,11 +120,12 @@ def validate_relationships(engine):
             result = conn.execute(text(sql)).fetchone()
             orphan_count = result[0]
             status = "OK" if orphan_count == 0 else f"FAIL ({orphan_count} orphans)"
-            print(f"  {name}: {status}")
+            logger.info("  %s: %s", name, status)
 
 
-def run_sample_analytics(engine):
-    print("\n--- Sample Analytics ---")
+def run_sample_analytics(engine) -> None:
+    """Run sample analytics queries for validation."""
+    logger.info("Running sample analytics...")
     queries = {
         "daily_sales": """
             SELECT date, SUM(quantity_sold) as total_qty, SUM(revenue) as total_revenue
@@ -140,20 +168,22 @@ def run_sample_analytics(engine):
     with engine.connect() as conn:
         for name, sql in queries.items():
             result = conn.execute(text(sql)).fetchall()
-            print(f"\n{name}:")
-            for row in result:
-                print(f"  {row}")
+            logger.info("Sample query %s returned %d rows", name, len(result))
 
 
-def main():
-    print("=== RetailSync AI Database Initialization ===")
-    engine = create_database()
-    print("\nLoading processed data into database...")
+def main() -> None:
+    """Main entry point for database initialization."""
+    from src.utils.logging import setup_logging
+    setup_logging(__name__)
+
+    logger.info("=== RetailSync AI Database Initialization ===")
+    engine = create_engine(create_database())
+    logger.info("Loading processed data into database...")
     load_data(engine)
-    print("\nValidating referential integrity...")
+    logger.info("Validating referential integrity...")
     validate_relationships(engine)
     run_sample_analytics(engine)
-    print("\nDatabase initialization complete.")
+    logger.info("Database initialization complete.")
 
 
 if __name__ == "__main__":

@@ -13,10 +13,8 @@ from dashboard.components.ui import (
     COLORS,
     inject_global_css,
     render_alert,
-    render_bar_chart,
     render_data_table,
     render_empty_state,
-    render_kpi_card,
     render_kpi_row,
     render_section_header,
 )
@@ -29,7 +27,7 @@ def render_model_performance_page(data: dict, models: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Model Performance</div>
         <div class="brand-subtitle">Demand forecasting model evaluation, metrics, and comparison</div>
         """,

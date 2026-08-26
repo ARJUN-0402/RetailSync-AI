@@ -14,11 +14,9 @@ if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
     render_alert,
     render_empty_state,
-    render_kpi_card,
     render_section_header,
 )
 from src.ai_analyst.config import AIAnalystConfig
@@ -162,4 +160,5 @@ def render_ai_analyst_page(data: dict) -> None:
         metrics.append({"label": "Warehouses", "value": str(len(wh_opt)), "icon": "🏭"})
 
     if metrics:
+        from dashboard.components.ui import render_kpi_row
         render_kpi_row(metrics, columns=3)

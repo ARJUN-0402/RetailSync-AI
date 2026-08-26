@@ -1,17 +1,18 @@
+"""Data ingestion and cleaning for RetailSync AI."""
+
+from __future__ import annotations
+
 import logging
 import os
 
 import numpy as np
 import pandas as pd
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from src.config import settings
+from src.exceptions import DataError
+from src.utils.logging import setup_logging
 
-RAW_DIR = "data/raw"
-PROCESSED_DIR = "data/processed"
-os.makedirs(PROCESSED_DIR, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 REQUIRED_SCHEMA = {
     "products": [
@@ -54,19 +55,21 @@ REQUIRED_SCHEMA = {
 }
 
 
-def validate_schema(df, name):
+def validate_schema(df: pd.DataFrame, name: str) -> None:
+    """Validate that a DataFrame has the required schema columns."""
     required = REQUIRED_SCHEMA.get(name, [])
     missing = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(f"{name} missing required columns: {missing}")
-    logger.info(f"Schema valid for {name}")
+        raise DataError(f"{name} missing required columns: {missing}")
+    logger.info("Schema valid for %s", name)
 
 
-def handle_missing(df, name):
+def handle_missing(df: pd.DataFrame, name: str) -> pd.DataFrame:
+    """Detect and fill missing values."""
     missing_counts = df.isnull().sum()
     if missing_counts.any():
         logger.warning(
-            f"Missing values in {name}:\n{missing_counts[missing_counts > 0]}"
+            "Missing values in %s:\n%s", name, missing_counts[missing_counts > 0]
         )
         for col in df.columns:
             if df[col].isnull().any():
@@ -78,37 +81,40 @@ def handle_missing(df, name):
                         if not df[col].mode().empty
                         else "Unknown"
                     )
-        logger.info(f"Filled missing values in {name}")
+        logger.info("Filled missing values in %s", name)
     else:
-        logger.info(f"No missing values in {name}")
+        logger.info("No missing values in %s", name)
     return df
 
 
-def handle_duplicates(df, name, subset=None):
+def handle_duplicates(df: pd.DataFrame, name: str, subset: list | None = None) -> pd.DataFrame:
+    """Detect and remove duplicate rows."""
     dup_count = df.duplicated(subset=subset).sum()
     if dup_count:
-        logger.warning(f"Found {dup_count} duplicates in {name}")
+        logger.warning("Found %d duplicates in %s", dup_count, name)
         df = df.drop_duplicates(subset=subset)
-        logger.info(f"Removed duplicates from {name}")
+        logger.info("Removed duplicates from %s", name)
     else:
-        logger.info(f"No duplicates in {name}")
+        logger.info("No duplicates in %s", name)
     return df
 
 
-def validate_dates(df, name, date_col="date"):
+def validate_dates(df: pd.DataFrame, name: str, date_col: str = "date") -> pd.DataFrame:
+    """Validate and coerce date columns."""
     if date_col in df.columns:
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
         invalid = df[date_col].isnull().sum()
         if invalid:
-            logger.warning(f"Invalid dates in {name}: {invalid} rows")
+            logger.warning("Invalid dates in %s: %d rows", name, invalid)
             df = df.dropna(subset=[date_col])
-        logger.info(f"Dates validated in {name}")
+        logger.info("Dates validated in %s", name)
     return df
 
 
-def check_outliers(df, name, method="iqr"):
+def check_outliers(df: pd.DataFrame, name: str, method: str = "iqr") -> pd.DataFrame:
+    """Log outlier counts for numeric columns."""
     numeric_cols = df.select_dtypes(include=[np.number]).columns
-    outlier_counts = {}
+    outlier_counts: dict[str, int] = {}
     for col in numeric_cols:
         if col in ["product_id", "store_id", "supplier_id", "warehouse_id"]:
             continue
@@ -118,15 +124,19 @@ def check_outliers(df, name, method="iqr"):
         outliers = df[(df[col] < lower) | (df[col] > upper)]
         if not outliers.empty:
             outlier_counts[col] = len(outliers)
-            logger.info(f"Outliers detected in {name}.{col}: {len(outliers)} records")
+            logger.info("Outliers detected in %s.%s: %d records", name, col, len(outliers))
     if not outlier_counts:
-        logger.info(f"No significant outliers in {name}")
+        logger.info("No significant outliers in %s", name)
     return df
 
 
-def clean_table(name):
-    logger.info(f"Cleaning {name}...")
-    df = pd.read_csv(os.path.join(RAW_DIR, f"{name}.csv"))
+def clean_table(name: str) -> pd.DataFrame:
+    """Clean a single raw data table."""
+    logger.info("Cleaning %s...", name)
+    raw_path = os.path.join(str(settings.paths.raw_data), f"{name}.csv")
+    if not os.path.exists(raw_path):
+        raise DataError(f"Raw file not found: {raw_path}")
+    df = pd.read_csv(raw_path)
     validate_schema(df, name)
     df = handle_missing(df, name)
     subset = None
@@ -138,7 +148,7 @@ def clean_table(name):
         subset = ["supplier_id"]
     elif name == "warehouses":
         subset = ["warehouse_id"]
-    elif name == "sales" or name == "inventory":
+    elif name in ("sales", "inventory"):
         subset = ["date", "product_id", "store_id"]
     df = handle_duplicates(df, name, subset=subset)
     df = validate_dates(df, name)
@@ -146,13 +156,16 @@ def clean_table(name):
     return df
 
 
-def main():
+def main() -> None:
+    """Main entry point for data ingestion."""
+    setup_logging(__name__)
+    logger.info("=== RetailSync AI - Data Ingestion ===")
     tables = ["products", "stores", "suppliers", "warehouses", "sales", "inventory"]
     for table in tables:
         cleaned = clean_table(table)
-        output_path = os.path.join(PROCESSED_DIR, f"{table}.csv")
+        output_path = os.path.join(str(settings.paths.processed_data), f"{table}.csv")
         cleaned.to_csv(output_path, index=False)
-        logger.info(f"Saved cleaned {table} to {output_path} (rows: {len(cleaned)})")
+        logger.info("Saved cleaned %s to %s (rows: %d)", table, output_path, len(cleaned))
     logger.info("Data ingestion and cleaning complete.")
 
 

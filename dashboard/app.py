@@ -1,3 +1,5 @@
+"""RetailSync AI - AI-Powered Retail Demand Forecasting & Supply Chain Intelligence Platform."""
+
 import os
 import sys
 
@@ -12,7 +14,6 @@ from sqlalchemy import create_engine
 
 from dashboard.business_intelligence import render_business_intelligence_page
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
     render_sidebar_branding,
     render_sidebar_footer,
@@ -27,8 +28,12 @@ from dashboard.pages.model_performance import render_model_performance_page
 from dashboard.pages.overview import render_overview_page
 from dashboard.pages.segmentation import render_segmentation_page
 from dashboard.pages.warehouse import render_warehouse_page
+from src.config import settings
+from src.health import get_health_status
+from src.utils.logging import setup_logging
 
-# Page config
+logger = setup_logging(__name__)
+
 st.set_page_config(
     page_title="RetailSync AI",
     page_icon="🏪",
@@ -39,7 +44,6 @@ st.set_page_config(
 inject_global_css()
 
 
-# Load models
 @st.cache_resource
 def load_models():
     models = {}
@@ -50,10 +54,12 @@ def load_models():
         "warehouse_clusterer": "models/warehouse_clusterer.pkl",
     }
     for name, path in model_files.items():
-        if os.path.exists(path):
+        full_path = os.path.join(_project_root, path)
+        if os.path.exists(full_path):
             try:
-                models[name] = joblib.load(path)
+                models[name] = joblib.load(full_path)
             except Exception as exc:
+                logger.warning("Could not load model %s: %s", name, exc)
                 st.warning(f"Could not load model {name}: {exc}")
     return models
 
@@ -61,16 +67,15 @@ def load_models():
 models = load_models()
 
 
-# Database connection
 @st.cache_resource
 def get_engine():
-    return create_engine("sqlite:///database/retailsync.db")
+    db_path = os.path.join(_project_root, settings.database.path)
+    return create_engine(f"sqlite:///{db_path}")
 
 
 engine = get_engine()
 
 
-# Load data
 @st.cache_data(ttl=300)
 def load_data():
     data = {}
@@ -85,22 +90,19 @@ def load_data():
         "wh_opt": "data/processed/warehouse_optimization.csv",
     }
     for name, path in csv_files.items():
-        if os.path.exists(path):
+        full_path = os.path.join(_project_root, path)
+        if os.path.exists(full_path):
             try:
-                if name == "features":
-                    data[name] = pd.read_csv(path, parse_dates=["date"])
-                elif name == "forecasts":
-                    data[name] = pd.read_csv(path, parse_dates=["date"])
-                elif name == "anomalies":
-                    data[name] = pd.read_csv(path, parse_dates=["date"])
+                if name in ("features", "forecasts", "anomalies"):
+                    data[name] = pd.read_csv(full_path, parse_dates=["date"])
                 else:
-                    data[name] = pd.read_csv(path)
+                    data[name] = pd.read_csv(full_path)
             except Exception as exc:
+                logger.warning("Could not load %s: %s", path, exc)
                 st.warning(f"Could not load {path}: {exc}")
         else:
             data[name] = pd.DataFrame()
 
-    # Load from database
     db_tables = {
         "products": "SELECT * FROM products",
         "stores": "SELECT * FROM stores",
@@ -115,6 +117,7 @@ def load_data():
         try:
             data[name] = pd.read_sql(query, engine)
         except Exception as exc:
+            logger.warning("Could not load %s from database: %s", name, exc)
             st.warning(f"Could not load {name} from database: {exc}")
             data[name] = pd.DataFrame()
 
@@ -124,9 +127,6 @@ def load_data():
 with st.spinner("Loading data..."):
     data = load_data()
 
-# ============================================================
-# SIDEBAR NAVIGATION
-# ============================================================
 render_sidebar_branding()
 
 st.sidebar.markdown("---")
@@ -151,7 +151,29 @@ page = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 
-# Technology stack
+if st.sidebar.button("🔍 Health Check", use_container_width=True):
+    health = get_health_status()
+    st.session_state["health_status"] = health
+
+if "health_status" in st.session_state:
+    health = st.session_state["health_status"]
+    with st.sidebar.expander("System Health", expanded=True):
+        status_color = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}.get(health["status"], "⚪")
+        st.markdown(f"**{status_color} {health['status'].upper()}**")
+        st.markdown(f"App: {health['app']} v{health['version']}")
+        st.markdown(f"Env: {health['environment']}")
+        for component, details in health.get("components", {}).items():
+            comp_status = details.get("status", "unknown")
+            comp_icon = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}.get(comp_status, "⚪")
+            st.markdown(f"{comp_icon} {component}: {comp_status}")
+            if details.get("error"):
+                st.caption(f"Error: {details['error']}")
+        if st.button("Close Health Check"):
+            del st.session_state["health_status"]
+            st.rerun()
+
+st.sidebar.markdown("---")
+
 st.sidebar.markdown("### Technology Stack")
 st.sidebar.markdown("- Python")
 st.sidebar.markdown("- Pandas / NumPy")
@@ -163,43 +185,33 @@ st.sidebar.markdown("- SHAP")
 
 render_sidebar_footer()
 
-# ============================================================
-# PAGE ROUTING
-# ============================================================
-# Handle navigation state from overview page buttons
 if "nav_page" in st.session_state:
     page = st.session_state["nav_page"]
     del st.session_state["nav_page"]
 
-if page == "📊 Executive Overview":
-    render_overview_page(data, models, engine)
-
-elif page == "📈 Business Intelligence":
-    render_business_intelligence_page(engine, data)
-
-elif page == "🔮 Demand Forecast":
-    render_demand_forecast_page(data, models)
-
-elif page == "📦 Inventory Intelligence":
-    render_inventory_page(data, engine)
-
-elif page == "⚠️ Demand Anomalies":
-    render_anomalies_page(data)
-
-elif page == "🎯 Segmentation":
-    render_segmentation_page(data)
-
-elif page == "🏭 Warehouse Intelligence":
-    render_warehouse_page(data)
-
-elif page == "📊 Model Performance":
-    render_model_performance_page(data, models)
-
-elif page == "🧠 Model Explainability":
-    render_explainability_page(models, data)
-
-elif page == "🤖 AI Analyst":
-    render_ai_analyst_page(data)
-
-elif page == "📁 Data Explorer":
-    render_data_explorer_page(data)
+try:
+    if page == "📊 Executive Overview":
+        render_overview_page(data, models, engine)
+    elif page == "📈 Business Intelligence":
+        render_business_intelligence_page(engine, data)
+    elif page == "🔮 Demand Forecast":
+        render_demand_forecast_page(data, models)
+    elif page == "📦 Inventory Intelligence":
+        render_inventory_page(data, engine)
+    elif page == "⚠️ Demand Anomalies":
+        render_anomalies_page(data)
+    elif page == "🎯 Segmentation":
+        render_segmentation_page(data)
+    elif page == "🏭 Warehouse Intelligence":
+        render_warehouse_page(data)
+    elif page == "📊 Model Performance":
+        render_model_performance_page(data, models)
+    elif page == "🧠 Model Explainability":
+        render_explainability_page(models, data)
+    elif page == "🤖 AI Analyst":
+        render_ai_analyst_page(data)
+    elif page == "📁 Data Explorer":
+        render_data_explorer_page(data)
+except Exception as exc:
+    logger.error("Dashboard page error: %s", exc, exc_info=True)
+    st.error(f"An unexpected error occurred: {exc}")

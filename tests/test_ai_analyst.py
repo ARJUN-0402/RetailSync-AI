@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import sys
 
-import pandas as pd
 import pytest
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -24,9 +23,7 @@ from src.ai_analyst.orchestrator import (
     _run_offline_answer,
     ask,
     _build_user_message,
-    _call_llm,
     _extract_tool_calls,
-    _run_tool_rounds,
 )
 from src.ai_analyst.retriever import retrieve, format_context
 from src.ai_analyst.tools import (

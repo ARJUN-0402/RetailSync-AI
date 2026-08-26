@@ -7,20 +7,17 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
-import sys
 from typing import Any
 
 from .config import AIAnalystConfig
 from .exceptions import (
-    GroundingError,
     LLMProviderError,
     MissingConfigurationError,
     RetrievalError,
     ToolExecutionError,
 )
-from .prompts import SYSTEM_PROMPT, build_tool_prompt, format_sources
+from .prompts import SYSTEM_PROMPT, build_tool_prompt
 from .retriever import format_context, retrieve
 from .tools import TOOLS, TOOL_REGISTRY, execute_tool
 
@@ -161,7 +158,6 @@ def _run_tool_rounds(question: str, config: AIAnalystConfig) -> tuple[str, list[
     tool_results: list[dict[str, Any]] = []
     sources: list[str] = []
 
-    current_user_message = question
     for round_num in range(config.max_tool_rounds):
         user_message = _build_user_message(question, "", tool_results)
         response = _call_llm(system_prompt, user_message, config)
@@ -212,11 +208,11 @@ def ask(question: str, config: AIAnalystConfig | None = None) -> dict[str, Any]:
         return {"answer": "Please ask a question about your retail data.", "sources": [], "error": None}
 
     try:
-        context = ""
+        _context = ""
         if config.enable_rag:
             try:
                 chunks = retrieve(question, top_k=config.retrieval_top_k, max_chunk_chars=config.retrieval_chunk_size)
-                context = format_context(chunks)
+                _context = format_context(chunks)
             except Exception as exc:
                 logger.warning("RAG retrieval failed: %s", exc)
                 raise RetrievalError(f"Documentation retrieval failed: {exc}") from exc

@@ -4,18 +4,13 @@ from __future__ import annotations
 
 import logging
 
-import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
-    render_bar_chart,
     render_data_table,
     render_empty_state,
-    render_kpi_card,
     render_kpi_row,
     render_section_header,
 )
@@ -28,7 +23,7 @@ def render_warehouse_page(data: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Warehouse Intelligence</div>
         <div class="brand-subtitle">Capacity utilization, optimization, and distribution analysis</div>
         """,
@@ -36,7 +31,7 @@ def render_warehouse_page(data: dict) -> None:
     )
 
     wh_opt = data.get("wh_opt")
-    warehouses = data.get("warehouses")
+    _warehouses = data.get("warehouses")
 
     if wh_opt is None or wh_opt.empty:
         render_empty_state(

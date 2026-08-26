@@ -4,18 +4,13 @@ from __future__ import annotations
 
 import logging
 
-import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
-    render_bar_chart,
     render_data_table,
     render_empty_state,
-    render_kpi_card,
     render_kpi_row,
     render_section_header,
 )
@@ -28,7 +23,7 @@ def render_anomalies_page(data: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Demand Anomalies</div>
         <div class="brand-subtitle">Unusual demand patterns, spikes, and outlier detection</div>
         """,

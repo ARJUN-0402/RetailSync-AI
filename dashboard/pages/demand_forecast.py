@@ -12,10 +12,7 @@ from dashboard.components.ui import (
     COLORS,
     inject_global_css,
     render_empty_state,
-    render_error_state,
-    render_kpi_card,
     render_kpi_row,
-    render_line_chart,
     render_section_header,
 )
 from dashboard.explainability_page import render_why_forecast
@@ -28,7 +25,7 @@ def render_demand_forecast_page(data: dict, models: dict) -> None:
     inject_global_css()
 
     st.markdown(
-        f"""
+        """
         <div class="brand-header">Demand Forecast</div>
         <div class="brand-subtitle">AI-powered demand predictions by product and store</div>
         """,
@@ -101,7 +98,7 @@ def render_demand_forecast_page(data: dict, models: dict) -> None:
             name="Forecasted Demand",
             line={"color": COLORS["primary"], "width": 3},
             fill="tozeroy",
-            fillcolor=f"rgba(59, 130, 246, 0.1)",
+            fillcolor="rgba(59, 130, 246, 0.1)",
         )
     )
     fig.update_layout(

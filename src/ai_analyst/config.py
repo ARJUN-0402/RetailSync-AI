@@ -7,27 +7,13 @@ Never hardcode credentials or API keys.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
 
 
 @dataclass
 class AIAnalystConfig:
-    """Container for AI analyst configuration.
-
-    Attributes:
-        llm_provider: LLM provider name (openai, anthropic, ollama).
-        llm_api_key: API key for the provider.
-        llm_model: Model name to use.
-        llm_base_url: Optional base URL for the provider.
-        llm_temperature: Sampling temperature for the LLM.
-        llm_max_tokens: Maximum tokens in the response.
-        retrieval_top_k: Number of documentation chunks to retrieve.
-        retrieval_chunk_size: Maximum characters per documentation chunk.
-        enable_rag: Whether to enable RAG.
-        enable_tools: Whether to enable tool calling.
-        max_tool_rounds: Maximum number of tool-calling rounds.
-        offline_mode: If True, skip LLM calls and use rule-based responses.
-    """
+    """Container for AI analyst configuration."""
 
     llm_provider: str = "openai"
     llm_api_key: str = ""
