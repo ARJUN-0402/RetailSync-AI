@@ -1,10 +1,12 @@
-import pandas as pd
-import numpy as np
-import os
 import logging
-from datetime import datetime
+import os
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+import numpy as np
+import pandas as pd
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 RAW_DIR = "data/raw"
@@ -12,13 +14,43 @@ PROCESSED_DIR = "data/processed"
 os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 REQUIRED_SCHEMA = {
-    "products": ["product_id", "product_name", "category", "unit_price", "cost_price", "supplier_id"],
+    "products": [
+        "product_id",
+        "product_name",
+        "category",
+        "unit_price",
+        "cost_price",
+        "supplier_id",
+    ],
     "stores": ["store_id", "store_name", "city", "state", "store_type"],
     "suppliers": ["supplier_id", "supplier_name", "country", "lead_time_days"],
-    "warehouses": ["warehouse_id", "warehouse_name", "city", "state", "capacity_m3", "supplier_id"],
-    "sales": ["date", "product_id", "store_id", "quantity_sold", "revenue", "promotion"],
-    "inventory": ["date", "product_id", "store_id", "quantity_on_hand", "reorder_point", "max_stock_level", "warehouse_id"],
+    "warehouses": [
+        "warehouse_id",
+        "warehouse_name",
+        "city",
+        "state",
+        "capacity_m3",
+        "supplier_id",
+    ],
+    "sales": [
+        "date",
+        "product_id",
+        "store_id",
+        "quantity_sold",
+        "revenue",
+        "promotion",
+    ],
+    "inventory": [
+        "date",
+        "product_id",
+        "store_id",
+        "quantity_on_hand",
+        "reorder_point",
+        "max_stock_level",
+        "warehouse_id",
+    ],
 }
+
 
 def validate_schema(df, name):
     required = REQUIRED_SCHEMA.get(name, [])
@@ -27,20 +59,28 @@ def validate_schema(df, name):
         raise ValueError(f"{name} missing required columns: {missing}")
     logger.info(f"Schema valid for {name}")
 
+
 def handle_missing(df, name):
     missing_counts = df.isnull().sum()
     if missing_counts.any():
-        logger.warning(f"Missing values in {name}:\n{missing_counts[missing_counts > 0]}")
+        logger.warning(
+            f"Missing values in {name}:\n{missing_counts[missing_counts > 0]}"
+        )
         for col in df.columns:
             if df[col].isnull().any():
                 if df[col].dtype in [np.float64, np.int64]:
                     df[col] = df[col].fillna(df[col].median())
                 else:
-                    df[col] = df[col].fillna(df[col].mode().iloc[0] if not df[col].mode().empty else "Unknown")
+                    df[col] = df[col].fillna(
+                        df[col].mode().iloc[0]
+                        if not df[col].mode().empty
+                        else "Unknown"
+                    )
         logger.info(f"Filled missing values in {name}")
     else:
         logger.info(f"No missing values in {name}")
     return df
+
 
 def handle_duplicates(df, name, subset=None):
     dup_count = df.duplicated(subset=subset).sum()
@@ -52,6 +92,7 @@ def handle_duplicates(df, name, subset=None):
         logger.info(f"No duplicates in {name}")
     return df
 
+
 def validate_dates(df, name, date_col="date"):
     if date_col in df.columns:
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
@@ -61,6 +102,7 @@ def validate_dates(df, name, date_col="date"):
             df = df.dropna(subset=[date_col])
         logger.info(f"Dates validated in {name}")
     return df
+
 
 def check_outliers(df, name, method="iqr"):
     numeric_cols = df.select_dtypes(include=[np.number]).columns
@@ -79,6 +121,7 @@ def check_outliers(df, name, method="iqr"):
         logger.info(f"No significant outliers in {name}")
     return df
 
+
 def clean_table(name):
     logger.info(f"Cleaning {name}...")
     df = pd.read_csv(os.path.join(RAW_DIR, f"{name}.csv"))
@@ -93,14 +136,13 @@ def clean_table(name):
         subset = ["supplier_id"]
     elif name == "warehouses":
         subset = ["warehouse_id"]
-    elif name == "sales":
-        subset = ["date", "product_id", "store_id"]
-    elif name == "inventory":
+    elif name == "sales" or name == "inventory":
         subset = ["date", "product_id", "store_id"]
     df = handle_duplicates(df, name, subset=subset)
     df = validate_dates(df, name)
     df = check_outliers(df, name)
     return df
+
 
 def main():
     tables = ["products", "stores", "suppliers", "warehouses", "sales", "inventory"]
@@ -110,6 +152,7 @@ def main():
         cleaned.to_csv(output_path, index=False)
         logger.info(f"Saved cleaned {table} to {output_path} (rows: {len(cleaned)})")
     logger.info("Data ingestion and cleaning complete.")
+
 
 if __name__ == "__main__":
     main()

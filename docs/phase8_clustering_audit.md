@@ -157,7 +157,10 @@ def label_warehouse_cluster(row):
 
 **Implementation (lines 161, 227, 283):**
 ```python
-joblib.dump({"model": kmeans_prod, "scaler": scaler_prod, "features": product_cluster_features}, "models/product_clusterer.pkl")
+joblib.dump(
+    {"model": kmeans_prod, "scaler": scaler_prod, "features": product_cluster_features},
+    "models/product_clusterer.pkl",
+)
 ```
 
 **Assessment:** ✅ **Correct.** Saves model, scaler, and feature list.
@@ -171,7 +174,9 @@ joblib.dump({"model": kmeans_prod, "scaler": scaler_prod, "features": product_cl
 **Location:** `segmentation.py` lines 249-250
 ```python
 warehouse_static = df[["warehouse_id", "supplier_id"]].drop_duplicates()
-warehouse_features = warehouse_features.merge(warehouse_static, on="warehouse_id", how="left")
+warehouse_features = warehouse_features.merge(
+    warehouse_static, on="warehouse_id", how="left"
+)
 ```
 
 **Root Cause:** The daily feature DataFrame `df` has multiple rows per `warehouse_id` (one per product-store combination). The `drop_duplicates()` without `subset=["warehouse_id"]` keeps all unique `(warehouse_id, supplier_id)` pairs, creating duplicate warehouse rows.
@@ -183,7 +188,9 @@ warehouse_features = warehouse_features.merge(warehouse_static, on="warehouse_id
 
 **Fix:**
 ```python
-warehouse_static = df[["warehouse_id", "supplier_id"]].drop_duplicates(subset=["warehouse_id"])
+warehouse_static = df[["warehouse_id", "supplier_id"]].drop_duplicates(
+    subset=["warehouse_id"]
+)
 ```
 
 ---

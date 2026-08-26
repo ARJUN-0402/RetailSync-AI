@@ -35,10 +35,15 @@ The warehouse optimization module is **misleadingly named**. It performs **descr
 **Implementation (lines 22-76):**
 ```python
 warehouse_util["occupied_volume_m3"] = latest_inventory.groupby("warehouse_id").agg(
-    occupied_volume_m3=("quantity_on_hand", lambda x: (x * latest_inventory.loc[x.index, "volume_m3"]).sum())
+    occupied_volume_m3=(
+        "quantity_on_hand",
+        lambda x: (x * latest_inventory.loc[x.index, "volume_m3"]).sum(),
+    )
 )
 
-warehouse_util["utilization_pct"] = (warehouse_util["occupied_volume_m3"] / warehouse_util["capacity_m3"] * 100).round(2)
+warehouse_util["utilization_pct"] = (
+    warehouse_util["occupied_volume_m3"] / warehouse_util["capacity_m3"] * 100
+).round(2)
 ```
 
 **Assessment:** ✅ **Correct calculation.** Occupied volume = sum(quantity_on_hand × product_volume_m3). Utilization = occupied / capacity × 100.
@@ -59,7 +64,7 @@ warehouse_util["utilization_pct"] = (warehouse_util["occupied_volume_m3"] / ware
 warehouse_util["turnover_ratio"] = np.where(
     warehouse_util["total_quantity"] > 0,
     warehouse_util["total_sold"] / warehouse_util["total_quantity"],
-    0
+    0,
 )
 ```
 

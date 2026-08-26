@@ -7,16 +7,47 @@ print("=== FEATURE DOCUMENTATION ===\n")
 
 feature_groups = {
     "Identifiers": ["product_id", "store_id", "date"],
-    "Static Attributes": ["category", "subcategory", "store_type", "city", "state", "supplier_id", "warehouse_id"],
+    "Static Attributes": [
+        "category",
+        "subcategory",
+        "store_type",
+        "city",
+        "state",
+        "supplier_id",
+        "warehouse_id",
+    ],
     "Product Attributes": ["unit_price", "cost_price", "weight_kg", "volume_m3"],
     "Supplier Attributes": ["lead_time_days", "reliability_score"],
     "Lag Features": [c for c in df.columns if "lag" in c],
     "Rolling Features": [c for c in df.columns if "rolling" in c],
     "Expanding Features": [c for c in df.columns if "expanding" in c],
-    "Time Features": ["day_of_week", "day_of_month", "month", "quarter", "year", "is_weekend", "is_month_start", "is_month_end", "month_sin", "month_cos", "dow_sin", "dow_cos"],
-    "Price Features": [c for c in df.columns if "price" in c and c not in ["unit_price", "cost_price"]],
+    "Time Features": [
+        "day_of_week",
+        "day_of_month",
+        "month",
+        "quarter",
+        "year",
+        "is_weekend",
+        "is_month_start",
+        "is_month_end",
+        "month_sin",
+        "month_cos",
+        "dow_sin",
+        "dow_cos",
+    ],
+    "Price Features": [
+        c for c in df.columns if "price" in c and c not in ["unit_price", "cost_price"]
+    ],
     "Promotion Features": [c for c in df.columns if "promotion" in c],
-    "Inventory Features": ["quantity_on_hand", "reorder_point", "max_stock_level", "stock_coverage_days", "stock_vs_reorder", "stock_vs_max", "stock_to_max_ratio"],
+    "Inventory Features": [
+        "quantity_on_hand",
+        "reorder_point",
+        "max_stock_level",
+        "stock_coverage_days",
+        "stock_vs_reorder",
+        "stock_vs_max",
+        "stock_to_max_ratio",
+    ],
     "Demand Variability": ["demand_cv_28d", "zero_demand_pct_28d"],
     "Aggregate Features": ["category_avg_demand", "store_type_avg_demand"],
     "Target Variables": [c for c in df.columns if "target" in c],
@@ -44,7 +75,9 @@ for target in ["target_demand_1d", "target_demand_7d", "target_demand_14d"]:
         print(f"  Std: {df[target].std():.2f}")
         print(f"  Min: {df[target].min():.2f}")
         print(f"  Max: {df[target].max():.2f}")
-        print(f"  Zero count: {(df[target] == 0).sum()} ({(df[target] == 0).mean() * 100:.1f}%)")
+        print(
+            f"  Zero count: {(df[target] == 0).sum()} ({(df[target] == 0).mean() * 100:.1f}%)"
+        )
 
 print("\n=== DATA LEAKAGE PREVENTION ====")
 print("- All lag features use .shift() to access past values only")

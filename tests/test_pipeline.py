@@ -1,34 +1,70 @@
 """
 Test suite for RetailSync AI pipeline.
 
-Run with: python -m pytest tests/test_pipeline.py -v
-Or: python tests/test_pipeline.py
+Run with:
+    python -m pytest tests/test_pipeline.py -v
+    # or
+    python tests/test_pipeline.py
 """
 
 import os
 import sys
-import pandas as pd
-import numpy as np
+
 import joblib
+import pandas as pd
 from sqlalchemy import create_engine, text
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-# Test configuration
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, PROJECT_ROOT)
+
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 DB_PATH = os.path.join(PROJECT_ROOT, "database", "retailsync.db")
 
+REQUIRED_FILES = [
+    "data/processed/features_daily.csv",
+    "data/processed/forecasts_next_14d.csv",
+    "data/processed/inventory_intelligence.csv",
+    "data/processed/anomalies.csv",
+    "data/processed/product_segments.csv",
+    "data/processed/store_segments.csv",
+    "data/processed/warehouse_segments.csv",
+    "data/processed/warehouse_optimization.csv",
+    "models/demand_forecaster.pkl",
+    "models/product_clusterer.pkl",
+    "models/store_clusterer.pkl",
+    "models/warehouse_clusterer.pkl",
+]
+
+REQUIRED_TABLES = [
+    "products",
+    "stores",
+    "suppliers",
+    "warehouses",
+    "sales",
+    "inventory",
+    "inventory_alerts",
+    "anomaly_flags",
+    "product_segments",
+    "store_segments",
+    "warehouse_segments",
+    "warehouse_optimization",
+]
+
+CRITICAL_FEATURE_COLS = ["product_id", "store_id", "date", "target_demand_1d"]
+
+
 class TestResults:
-    """Track test results."""
+    """Track test results for the standalone runner (backward compatibility)."""
+
+    __test__ = False  # Prevent pytest from collecting this class
+
     def __init__(self):
         self.passed = 0
         self.failed = 0
         self.errors = []
-    
+
     def record(self, test_name, passed, message=""):
         if passed:
             self.passed += 1
@@ -37,287 +73,340 @@ class TestResults:
             self.failed += 1
             self.errors.append(f"{test_name}: {message}")
             print(f"  [FAIL] {test_name}: {message}")
-    
+
     def summary(self):
         total = self.passed + self.failed
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"TEST SUMMARY: {self.passed}/{total} passed")
         if self.errors:
-            print(f"\nFAILED TESTS:")
+            print("\nFAILED TESTS:")
             for error in self.errors:
                 print(f"  - {error}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         return self.failed == 0
+
 
 # ============================================================
 # TEST SUITE
 # ============================================================
 
-def test_data_files_exist(results):
-    """Test that all required data files exist."""
-    print("\n=== Testing Data Files ===")
-    
-    required_files = [
-        "data/processed/features_daily.csv",
-        "data/processed/forecasts_next_14d.csv",
-        "data/processed/inventory_intelligence.csv",
-        "data/processed/anomalies.csv",
-        "data/processed/product_segments.csv",
-        "data/processed/store_segments.csv",
-        "data/processed/warehouse_segments.csv",
-        "data/processed/warehouse_optimization.csv",
-        "models/demand_forecaster.pkl",
-        "models/product_clusterer.pkl",
-        "models/store_clusterer.pkl",
-        "models/warehouse_clusterer.pkl",
-    ]
-    
-    for file_path in required_files:
-        full_path = os.path.join(PROJECT_ROOT, file_path)
-        exists = os.path.exists(full_path)
-        results.record(f"File exists: {file_path}", exists)
-        
-        if exists:
-            size = os.path.getsize(full_path)
-            results.record(f"File non-empty: {file_path}", size > 0, f"Size: {size} bytes")
 
-def test_database_tables(results):
+def test_data_files_exist():
+    """Test that all required data files exist and are non-empty."""
+    print("\n=== Testing Data Files ===")
+    for file_path in REQUIRED_FILES:
+        full_path = os.path.join(PROJECT_ROOT, file_path)
+        assert os.path.exists(full_path), f"File does not exist: {file_path}"
+        size = os.path.getsize(full_path)
+        assert size > 0, f"File is empty: {file_path} (size: {size} bytes)"
+        print(f"  [PASS] {file_path} ({size:,} bytes)")
+
+
+def test_database_tables():
     """Test that database tables exist and have data."""
     print("\n=== Testing Database Tables ===")
-    
-    if not os.path.exists(DB_PATH):
-        results.record("Database exists", False, f"DB not found at {DB_PATH}")
-        return
-    
-    engine = create_engine(f"sqlite:///{DB_PATH}")
-    
-    with engine.connect() as conn:
-        # Check tables exist
-        tables = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
-        table_names = [r[0] for r in tables]
-        
-        required_tables = [
-            "products", "stores", "suppliers", "warehouses",
-            "sales", "inventory", "inventory_alerts",
-            "anomaly_flags", "product_segments", "store_segments",
-            "warehouse_segments", "warehouse_optimization"
-        ]
-        
-        for table in required_tables:
-            exists = table in table_names
-            results.record(f"Table exists: {table}", exists)
-            
-            if exists:
-                count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()[0]
-                results.record(f"Table has data: {table}", count > 0, f"Count: {count}")
+    assert os.path.exists(DB_PATH), f"Database not found at {DB_PATH}"
 
-def test_feature_engineering(results):
+    engine = create_engine(f"sqlite:///{DB_PATH}")
+    with engine.connect() as conn:
+        tables = conn.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table'")
+        ).fetchall()
+        table_names = [r[0] for r in tables]
+
+        for table in REQUIRED_TABLES:
+            assert table in table_names, f"Table does not exist: {table}"
+            count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()[0]
+            assert count > 0, f"Table has no data: {table} (count: {count})"
+            print(f"  [PASS] Table {table}: {count} rows")
+
+
+def test_feature_engineering():
     """Test feature engineering output."""
     print("\n=== Testing Feature Engineering ===")
-    
     features_path = os.path.join(PROCESSED_DIR, "features_daily.csv")
-    if not os.path.exists(features_path):
-        results.record("Features file exists", False)
-        return
-    
-    df = pd.read_csv(features_path, parse_dates=["date"])
-    
-    # Basic checks
-    results.record("Features not empty", len(df) > 0, f"Rows: {len(df)}")
-    results.record("Has date column", "date" in df.columns)
-    results.record("Has product_id column", "product_id" in df.columns)
-    results.record("Has store_id column", "store_id" in df.columns)
-    results.record("Has target columns", any("target" in c for c in df.columns))
-    
-    # Check for required feature categories
-    has_lag = any("lag" in c for c in df.columns)
-    has_rolling = any("rolling" in c for c in df.columns)
-    has_time = any(c in df.columns for c in ["day_of_week", "month", "year"])
-    
-    results.record("Has lag features", has_lag)
-    results.record("Has rolling features", has_rolling)
-    results.record("Has time features", has_time)
-    
-    # Check no NaN in critical columns
-    critical_cols = ["product_id", "store_id", "date", "target_demand_1d"]
-    for col in critical_cols:
-        if col in df.columns:
-            nan_count = df[col].isna().sum()
-            results.record(f"No NaN in {col}", nan_count == 0, f"NaN count: {nan_count}")
+    assert os.path.exists(features_path), f"Features file missing: {features_path}"
 
-def test_forecasting(results):
+    df = pd.read_csv(features_path, parse_dates=["date"])
+
+    assert len(df) > 0, "Features DataFrame is empty"
+    print(f"  [PASS] Features not empty ({len(df):,} rows)")
+
+    for col in ["date", "product_id", "store_id", "target_demand_1d"]:
+        assert col in df.columns, f"Missing column: {col}"
+        print(f"  [PASS] Has {col} column")
+
+    assert any("lag" in c for c in df.columns), "Missing lag features"
+    print("  [PASS] Has lag features")
+
+    assert any("rolling" in c for c in df.columns), "Missing rolling features"
+    print("  [PASS] Has rolling features")
+
+    assert any(c in df.columns for c in ["day_of_week", "month", "year"]), (
+        "Missing time features"
+    )
+    print("  [PASS] Has time features")
+
+    for col in CRITICAL_FEATURE_COLS:
+        nan_count = df[col].isna().sum()
+        assert nan_count == 0, f"NaN values in {col}: {nan_count}"
+        print(f"  [PASS] No NaN in {col}")
+
+
+def test_forecasting():
     """Test forecasting model and outputs."""
     print("\n=== Testing Forecasting ===")
-    
-    # Check model exists
     model_path = os.path.join(MODELS_DIR, "demand_forecaster.pkl")
-    if not os.path.exists(model_path):
-        results.record("Forecaster model exists", False)
-        return
-    
-    model_package = joblib.load(model_path)
-    results.record("Model has 'model' key", "model" in model_package)
-    results.record("Model has 'feature_cols' key", "feature_cols" in model_package)
-    results.record("Model has 'metrics' key", "metrics" in model_package)
-    
-    # Check forecasts
-    forecasts_path = os.path.join(PROCESSED_DIR, "forecasts_next_14d.csv")
-    if os.path.exists(forecasts_path):
-        forecasts = pd.read_csv(forecasts_path, parse_dates=["date"])
-        results.record("Forecasts not empty", len(forecasts) > 0, f"Rows: {len(forecasts)}")
-        results.record("Has forecast_demand column", "forecast_demand" in forecasts.columns)
-        results.record("Forecasts are non-negative", (forecasts["forecast_demand"] >= 0).all())
+    assert os.path.exists(model_path), f"Model file missing: {model_path}"
 
-def test_inventory_intelligence(results):
+    model_package = joblib.load(model_path)
+    assert "model" in model_package, "Model package missing 'model' key"
+    assert "feature_cols" in model_package, "Model package missing 'feature_cols' key"
+    assert "metrics" in model_package, "Model package missing 'metrics' key"
+    assert "model_name" in model_package, "Model package missing 'model_name' key"
+    print("  [PASS] Model package has all required keys")
+    print(f"  [PASS] Model name: {model_package['model_name']}")
+    print(f"  [PASS] Model type: {type(model_package['model']).__name__}")
+
+    # Verify the model has a predict method (critical for forecast_pipeline.py)
+    assert hasattr(model_package["model"], "predict"), (
+        "Model does not have predict() method"
+    )
+    print("  [PASS] Model has predict() method")
+
+    # Verify model_name matches the actual model type (no mismatch)
+    model_name = model_package["model_name"]
+    model_type = type(model_package["model"]).__name__
+    if "Baseline" in model_name:
+        assert (
+            "Predictor" in model_type
+            or "Regressor" not in model_type
+            or model_type == "BaselineMeanPredictor"
+        ), f"Model name '{model_name}' does not match model type '{model_type}'"
+        print(
+            f"  [PASS] Model name '{model_name}' is consistent with model type '{model_type}'"
+        )
+
+    forecasts_path = os.path.join(PROCESSED_DIR, "forecasts_next_14d.csv")
+    assert os.path.exists(forecasts_path), f"Forecasts file missing: {forecasts_path}"
+    forecasts = pd.read_csv(forecasts_path, parse_dates=["date"])
+    assert len(forecasts) > 0, "Forecasts DataFrame is empty"
+    assert "forecast_demand" in forecasts.columns, "Missing forecast_demand column"
+    assert (forecasts["forecast_demand"] >= 0).all(), "Forecasts must be non-negative"
+    print(f"  [PASS] Forecasts: {len(forecasts)} rows, all non-negative")
+
+
+def test_inventory_intelligence():
     """Test inventory intelligence outputs."""
     print("\n=== Testing Inventory Intelligence ===")
-    
     inv_path = os.path.join(PROCESSED_DIR, "inventory_intelligence.csv")
-    if not os.path.exists(inv_path):
-        results.record("Inventory intelligence file exists", False)
-        return
-    
-    df = pd.read_csv(inv_path)
-    
-    results.record("Inventory data not empty", len(df) > 0, f"Rows: {len(df)}")
-    results.record("Has stockout_risk column", "stockout_risk" in df.columns)
-    results.record("Has overstock_risk column", "overstock_risk" in df.columns)
-    results.record("Has reorder_urgency column", "reorder_urgency" in df.columns)
-    results.record("Has composite_risk_score column", "composite_risk_score" in df.columns)
-    
-    # Check risk values are valid
-    valid_stockout = df["stockout_risk"].isin(["HIGH", "MEDIUM", "LOW"]).all()
-    results.record("Valid stockout risk values", valid_stockout)
-    
-    valid_overstock = df["overstock_risk"].isin(["HIGH", "MEDIUM", "LOW"]).all()
-    results.record("Valid overstock risk values", valid_overstock)
+    assert os.path.exists(inv_path), f"Inventory file missing: {inv_path}"
 
-def test_anomaly_detection(results):
+    df = pd.read_csv(inv_path)
+    assert len(df) > 0, "Inventory intelligence DataFrame is empty"
+    print(f"  [PASS] Inventory data: {len(df)} rows")
+
+    for col in [
+        "stockout_risk",
+        "overstock_risk",
+        "reorder_urgency",
+        "composite_risk_score",
+    ]:
+        assert col in df.columns, f"Missing column: {col}"
+        print(f"  [PASS] Has {col} column")
+
+    assert df["stockout_risk"].isin(["HIGH", "MEDIUM", "LOW"]).all(), (
+        "Invalid stockout_risk values"
+    )
+    print("  [PASS] Valid stockout risk values")
+
+    assert df["overstock_risk"].isin(["HIGH", "MEDIUM", "LOW"]).all(), (
+        "Invalid overstock_risk values"
+    )
+    print("  [PASS] Valid overstock risk values")
+
+
+def test_anomaly_detection():
     """Test anomaly detection outputs."""
     print("\n=== Testing Anomaly Detection ===")
-    
     anomalies_path = os.path.join(PROCESSED_DIR, "anomalies.csv")
-    if not os.path.exists(anomalies_path):
-        results.record("Anomalies file exists", False)
-        return
-    
-    df = pd.read_csv(anomalies_path, parse_dates=["date"])
-    
-    results.record("Anomalies not empty", len(df) > 0, f"Rows: {len(df)}")
-    results.record("Has anomaly_type column", "anomaly_type" in df.columns)
-    results.record("Has z_score column", "z_score" in df.columns)
-    
-    # Check anomaly types
-    valid_types = ["Demand Spike", "Demand Drop", "Unusual Pattern"]
-    has_valid_types = df["anomaly_type"].isin(valid_types).all()
-    results.record("Valid anomaly types", has_valid_types)
-    
-    # Check database
-    if os.path.exists(DB_PATH):
-        engine = create_engine(f"sqlite:///{DB_PATH}")
-        with engine.connect() as conn:
-            count = conn.execute(text("SELECT COUNT(*) FROM anomaly_flags")).fetchone()[0]
-            results.record("Anomaly flags in DB", count > 0, f"Count: {count}")
+    assert os.path.exists(anomalies_path), f"Anomalies file missing: {anomalies_path}"
 
-def test_clustering(results):
+    df = pd.read_csv(anomalies_path, parse_dates=["date"])
+    assert len(df) > 0, "Anomalies DataFrame is empty"
+    print(f"  [PASS] Anomalies: {len(df)} rows")
+
+    for col in ["anomaly_type", "z_score"]:
+        assert col in df.columns, f"Missing column: {col}"
+        print(f"  [PASS] Has {col} column")
+
+    valid_types = ["Demand Spike", "Demand Drop", "Unusual Pattern"]
+    assert df["anomaly_type"].isin(valid_types).all(), "Invalid anomaly types"
+    print("  [PASS] Valid anomaly types")
+
+    assert os.path.exists(DB_PATH), f"Database not found at {DB_PATH}"
+    engine = create_engine(f"sqlite:///{DB_PATH}")
+    with engine.connect() as conn:
+        count = conn.execute(text("SELECT COUNT(*) FROM anomaly_flags")).fetchone()[0]
+        assert count > 0, f"No anomaly flags in database (count: {count})"
+        print(f"  [PASS] Anomaly flags in DB: {count}")
+
+
+def test_clustering():
     """Test clustering/segmentation outputs."""
     print("\n=== Testing Clustering ===")
-    
-    # Check product segments
+
+    # Product segments
     prod_path = os.path.join(PROCESSED_DIR, "product_segments.csv")
-    if os.path.exists(prod_path):
-        df = pd.read_csv(prod_path)
-        results.record("Product segments not empty", len(df) > 0, f"Rows: {len(df)}")
-        results.record("Has cluster column", "cluster" in df.columns or "product_cluster" in df.columns)
-    
-    # Check store segments
+    assert os.path.exists(prod_path), f"Product segments missing: {prod_path}"
+    df = pd.read_csv(prod_path)
+    assert len(df) > 0, "Product segments DataFrame is empty"
+    assert "cluster" in df.columns or "product_cluster" in df.columns, (
+        "Missing cluster column in product segments"
+    )
+    # Products should be exactly 50
+    assert len(df) == 50, f"Expected 50 products, got {len(df)}"
+    print(f"  [PASS] Product segments: {len(df)} products")
+
+    # Store segments
     store_path = os.path.join(PROCESSED_DIR, "store_segments.csv")
-    if os.path.exists(store_path):
-        df = pd.read_csv(store_path)
-        results.record("Store segments not empty", len(df) > 0, f"Rows: {len(df)}")
-    
-    # Check warehouse segments
+    assert os.path.exists(store_path), f"Store segments missing: {store_path}"
+    df = pd.read_csv(store_path)
+    assert len(df) > 0, "Store segments DataFrame is empty"
+    assert len(df) == 10, f"Expected 10 stores, got {len(df)}"
+    print(f"  [PASS] Store segments: {len(df)} stores")
+
+    # Warehouse segments
     wh_path = os.path.join(PROCESSED_DIR, "warehouse_segments.csv")
-    if os.path.exists(wh_path):
-        df = pd.read_csv(wh_path)
-        results.record("Warehouse segments not empty", len(df) > 0, f"Rows: {len(df)}")
-    
-    # Check models
+    assert os.path.exists(wh_path), f"Warehouse segments missing: {wh_path}"
+    df = pd.read_csv(wh_path)
+    assert len(df) > 0, "Warehouse segments DataFrame is empty"
+    assert len(df) == 5, f"Expected 5 warehouses, got {len(df)}"
+    print(f"  [PASS] Warehouse segments: {len(df)} warehouses")
+
+    # Model files
     for model_name in ["product_clusterer", "store_clusterer", "warehouse_clusterer"]:
         model_path = os.path.join(MODELS_DIR, f"{model_name}.pkl")
-        exists = os.path.exists(model_path)
-        results.record(f"Clusterer model exists: {model_name}", exists)
-        
-        if exists:
-            model = joblib.load(model_path)
-            results.record(f"Model has 'model' key: {model_name}", "model" in model)
+        assert os.path.exists(model_path), f"Clusterer model missing: {model_name}"
+        model = joblib.load(model_path)
+        assert "model" in model, f"Missing 'model' key in {model_name}"
+        assert "scaler" in model, f"Missing 'scaler' key in {model_name}"
+        assert "features" in model, f"Missing 'features' key in {model_name}"
+        print(f"  [PASS] {model_name}: {type(model['model']).__name__}")
 
-def test_pipeline_integration(results):
+
+def test_pipeline_integration():
     """Test end-to-end pipeline integration."""
     print("\n=== Testing Pipeline Integration ===")
-    
-    # Check all outputs can be loaded together
-    try:
-        features = pd.read_csv(os.path.join(PROCESSED_DIR, "features_daily.csv"), parse_dates=["date"])
-        forecasts = pd.read_csv(os.path.join(PROCESSED_DIR, "forecasts_next_14d.csv"), parse_dates=["date"])
-        inv_intel = pd.read_csv(os.path.join(PROCESSED_DIR, "inventory_intelligence.csv"))
-        anomalies = pd.read_csv(os.path.join(PROCESSED_DIR, "anomalies.csv"), parse_dates=["date"])
-        
-        results.record("All main outputs loadable", True)
-        
-        # Check date ranges
-        features_date_range = (features["date"].min(), features["date"].max())
-        forecasts_date_range = (forecasts["date"].min(), forecasts["date"].max())
-        
-        results.record("Features date range valid", features_date_range[0] < features_date_range[1])
-        results.record("Forecasts are future dates", forecasts_date_range[0] >= features_date_range[1])
-        
-    except Exception as e:
-        results.record("Pipeline integration", False, str(e))
 
-def test_dashboard_artifacts(results):
+    base = os.path.join(PROCESSED_DIR, "features_daily.csv")
+    assert os.path.exists(base), f"Features file missing: {base}"
+
+    forecasts_path = os.path.join(PROCESSED_DIR, "forecasts_next_14d.csv")
+    assert os.path.exists(forecasts_path), f"Forecasts file missing: {forecasts_path}"
+
+    inv_path = os.path.join(PROCESSED_DIR, "inventory_intelligence.csv")
+    assert os.path.exists(inv_path), f"Inventory file missing: {inv_path}"
+
+    anomalies_path = os.path.join(PROCESSED_DIR, "anomalies.csv")
+    assert os.path.exists(anomalies_path), f"Anomalies file missing: {anomalies_path}"
+
+    features = pd.read_csv(base, parse_dates=["date"])
+    forecasts = pd.read_csv(forecasts_path, parse_dates=["date"])
+    pd.read_csv(inv_path)
+    pd.read_csv(anomalies_path, parse_dates=["date"])
+
+    print("  [PASS] All main outputs loadable")
+
+    features_date_range = (features["date"].min(), features["date"].max())
+    forecasts_date_range = (forecasts["date"].min(), forecasts["date"].max())
+
+    assert features_date_range[0] < features_date_range[1], (
+        "Invalid features date range"
+    )
+    print("  [PASS] Features date range valid")
+
+    assert forecasts_date_range[0] >= features_date_range[1], (
+        "Forecasts should be future dates"
+    )
+    print("  [PASS] Forecasts are future dates")
+
+
+def test_dashboard_artifacts():
     """Test dashboard can be built."""
     print("\n=== Testing Dashboard ===")
-    
     dashboard_path = os.path.join(PROJECT_ROOT, "dashboard", "app.py")
-    results.record("Dashboard app exists", os.path.exists(dashboard_path))
-    
-    if os.path.exists(dashboard_path):
-        with open(dashboard_path, "r", encoding="utf-8") as f:
-            code = f.read()
-        
-        results.record("Dashboard has imports", "import streamlit" in code)
-        results.record("Dashboard has load_data", "load_data" in code)
-        results.record("Dashboard has pages", "page =" in code or "radio" in code)
+    assert os.path.exists(dashboard_path), f"Dashboard app missing: {dashboard_path}"
+
+    with open(dashboard_path, "r", encoding="utf-8") as f:
+        code = f.read()
+
+    assert "import streamlit" in code, "Dashboard missing streamlit import"
+    print("  [PASS] Dashboard has imports")
+
+    assert "load_data" in code, "Dashboard missing load_data function"
+    print("  [PASS] Dashboard has load_data")
+
+    assert "page =" in code or "radio" in code, "Dashboard missing page navigation"
+    print("  [PASS] Dashboard has pages")
+
 
 # ============================================================
-# MAIN TEST RUNNER
+# STANDALONE RUNNER (backward compatibility)
 # ============================================================
+
 
 def run_all_tests():
-    """Run all tests."""
-    print("="*60)
+    """Run all tests using the custom runner (for backward compatibility).
+
+    Wraps each test function in a try/except to report pass/fail
+    the same way the original TestResults-based runner did.
+    """
+    print("=" * 60)
     print("RETAILSYNC AI - TEST SUITE")
-    print("="*60)
-    
-    results = TestResults()
-    
-    # Run all test suites
-    test_data_files_exist(results)
-    test_database_tables(results)
-    test_feature_engineering(results)
-    test_forecasting(results)
-    test_inventory_intelligence(results)
-    test_anomaly_detection(results)
-    test_clustering(results)
-    test_pipeline_integration(results)
-    test_dashboard_artifacts(results)
-    
-    # Print summary
-    all_passed = results.summary()
-    
-    return 0 if all_passed else 1
+    print("=" * 60)
+
+    test_funcs = [
+        ("test_data_files_exist", test_data_files_exist),
+        ("test_database_tables", test_database_tables),
+        ("test_feature_engineering", test_feature_engineering),
+        ("test_forecasting", test_forecasting),
+        ("test_inventory_intelligence", test_inventory_intelligence),
+        ("test_anomaly_detection", test_anomaly_detection),
+        ("test_clustering", test_clustering),
+        ("test_pipeline_integration", test_pipeline_integration),
+        ("test_dashboard_artifacts", test_dashboard_artifacts),
+    ]
+
+    passed = 0
+    failed = 0
+    errors = []
+
+    for func_name, func in test_funcs:
+        try:
+            func()
+            passed += 1
+        except (
+            AssertionError,
+            RuntimeError,
+            ValueError,
+            KeyError,
+            AttributeError,
+        ) as e:
+            failed += 1
+            errors.append(f"{func_name}: ERROR - {e}")
+            print(f"  [ERROR] {func_name}: {e}")
+
+    total = passed + failed
+    print(f"\n{'=' * 60}")
+    print(f"TEST SUMMARY: {passed}/{total} test functions passed")
+    if errors:
+        print("\nFAILED TESTS:")
+        for error in errors:
+            print(f"  - {error}")
+    print(f"{'=' * 60}")
+    return 0 if failed == 0 else 1
+
 
 if __name__ == "__main__":
-    exit_code = run_all_tests()
-    sys.exit(exit_code)
+    sys.exit(run_all_tests())

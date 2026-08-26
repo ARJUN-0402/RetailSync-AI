@@ -165,7 +165,7 @@ composite_risk_score = (
 
 **Location:** Line 50
 ```python
-forecast_demand_7d=("target_demand_7d", "mean")
+forecast_demand_7d = ("target_demand_7d", "mean")
 ```
 
 **Problem:** `target_demand_7d` is the **actual future demand** from the historical dataset, not a forecast. This is only available because the feature engineering step created it. For real-time inventory intelligence, this would need to come from the forecasting model.
@@ -181,7 +181,7 @@ forecast_demand_7d=("target_demand_7d", "mean")
 latest_inventory["stock_coverage_days"] = np.where(
     latest_inventory["forecast_demand_7d"] > 0,
     latest_inventory["quantity_on_hand"] / latest_inventory["forecast_demand_7d"],
-    np.inf
+    np.inf,
 )
 ```
 
@@ -194,9 +194,12 @@ latest_inventory["stock_coverage_days"] = np.where(
 **Location:** Lines 116-120
 ```python
 dead_condition = (
-    (latest_inventory["quantity_on_hand"] > latest_inventory["max_stock_level"] * 0.8) &
-    ((latest_inventory["forecast_demand_14d"] == 0) | (latest_inventory["demand_cv_28d"] == 0)) &
-    (latest_inventory["stock_coverage_days"] > 90)
+    (latest_inventory["quantity_on_hand"] > latest_inventory["max_stock_level"] * 0.8)
+    & (
+        (latest_inventory["forecast_demand_14d"] == 0)
+        | (latest_inventory["demand_cv_28d"] == 0)
+    )
+    & (latest_inventory["stock_coverage_days"] > 90)
 )
 ```
 

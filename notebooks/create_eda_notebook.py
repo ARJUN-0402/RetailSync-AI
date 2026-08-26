@@ -1,5 +1,4 @@
 import json
-import os
 
 nb = {
     "cells": [],
@@ -7,15 +6,12 @@ nb = {
         "kernelspec": {
             "display_name": "Python 3",
             "language": "python",
-            "name": "python3"
+            "name": "python3",
         },
-        "language_info": {
-            "name": "python",
-            "version": "3.13.0"
-        }
+        "language_info": {"name": "python", "version": "3.13.0"},
     },
     "nbformat": 4,
-    "nbformat_minor": 4
+    "nbformat_minor": 4,
 }
 
 markdown_template = """# Exploratory Data Analysis — RetailSync AI
@@ -30,78 +26,105 @@ markdown_template = """# Exploratory Data Analysis — RetailSync AI
 """
 
 sections = [
-    ("## 1. Sales Trends Over Time", "Daily and monthly sales trends showing revenue and quantity patterns over the 2-year period."),
-    ("## 2. Seasonal Patterns", "Monthly and day-of-week patterns, plus category-level seasonality heatmap."),
-    ("## 3. Product Performance", "Top products by revenue, category revenue share, and product-level metrics."),
-    ("## 4. Store Performance", "Store-level revenue ranking and performance by store type."),
-    ("## 5. Inventory Behavior", "Distribution of inventory levels and average stock by category."),
-    ("## 6. Revenue Trends", "Revenue trends with moving average and promotional vs regular sales breakdown."),
-    ("## 7. Demand Variability", "Coefficient of variation analysis to identify high-variability products."),
+    (
+        "## 1. Sales Trends Over Time",
+        "Daily and monthly sales trends showing revenue and quantity patterns over the 2-year period.",
+    ),
+    (
+        "## 2. Seasonal Patterns",
+        "Monthly and day-of-week patterns, plus category-level seasonality heatmap.",
+    ),
+    (
+        "## 3. Product Performance",
+        "Top products by revenue, category revenue share, and product-level metrics.",
+    ),
+    (
+        "## 4. Store Performance",
+        "Store-level revenue ranking and performance by store type.",
+    ),
+    (
+        "## 5. Inventory Behavior",
+        "Distribution of inventory levels and average stock by category.",
+    ),
+    (
+        "## 6. Revenue Trends",
+        "Revenue trends with moving average and promotional vs regular sales breakdown.",
+    ),
+    (
+        "## 7. Demand Variability",
+        "Coefficient of variation analysis to identify high-variability products.",
+    ),
     ("## 8. Stockout Patterns", "Stockout frequency analysis by product and category."),
 ]
 
 for title, desc in sections:
-    nb["cells"].append({
+    nb["cells"].append(
+        {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [markdown_template.format(section=title + "\n\n" + desc)],
+        }
+    )
+    nb["cells"].append(
+        {
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": [
+                "import pandas as pd\n",
+                "import numpy as np\n",
+                "import matplotlib.pyplot as plt\n",
+                "import plotly.express as px\n",
+                "import plotly.graph_objects as go\n",
+                "from plotly.subplots import make_subplots\n",
+                "import os\n",
+                "from sqlalchemy import create_engine\n",
+                "\n",
+                'plt.style.use("seaborn-v0_8-darkgrid")\n',
+                'OUTPUT_DIR = "notebooks/eda_output"\n',
+                'engine = create_engine("sqlite:///database/retailsync.db")\n',
+                "\n",
+                "# Load data\n",
+                'products = pd.read_sql("SELECT * FROM products", engine)\n',
+                'stores = pd.read_sql("SELECT * FROM stores", engine)\n',
+                'sales = pd.read_sql("SELECT * FROM sales", engine)\n',
+                'inventory = pd.read_sql("SELECT * FROM inventory", engine)\n',
+                "\n",
+                'sales["date"] = pd.to_datetime(sales["date"])\n',
+                'inventory["date"] = pd.to_datetime(inventory["date"])\n',
+                'products["launch_date"] = pd.to_datetime(products["launch_date"])\n',
+                "\n",
+                'print("Data loaded successfully")\n',
+                'print("Run `python notebooks/eda_analysis.py` to generate all visualizations in notebooks/eda_output/")\n',
+            ],
+        }
+    )
+
+nb["cells"].append(
+    {
         "cell_type": "markdown",
         "metadata": {},
-        "source": [markdown_template.format(section=title + "\n\n" + desc)]
-    })
-    nb["cells"].append({
-        "cell_type": "code",
-        "execution_count": None,
-        "metadata": {},
-        "outputs": [],
         "source": [
-            "import pandas as pd\n",
-            "import numpy as np\n",
-            "import matplotlib.pyplot as plt\n",
-            "import plotly.express as px\n",
-            "import plotly.graph_objects as go\n",
-            "from plotly.subplots import make_subplots\n",
-            "import os\n",
-            "from sqlalchemy import create_engine\n",
+            "---\n",
             "\n",
-            "plt.style.use(\"seaborn-v0_8-darkgrid\")\n",
-            "OUTPUT_DIR = \"notebooks/eda_output\"\n",
-            "engine = create_engine(\"sqlite:///database/retailsync.db\")\n",
+            "## Key Findings\n",
             "\n",
-            "# Load data\n",
-            "products = pd.read_sql(\"SELECT * FROM products\", engine)\n",
-            "stores = pd.read_sql(\"SELECT * FROM stores\", engine)\n",
-            "sales = pd.read_sql(\"SELECT * FROM sales\", engine)\n",
-            "inventory = pd.read_sql(\"SELECT * FROM inventory\", engine)\n",
+            "1. **Total Revenue:** $227.5M across 876,546 units sold\n",
+            "2. **Date Range:** 2023-08-11 to 2025-08-09 (730 days)\n",
+            "3. **Products/Stores:** 50 products across 10 stores\n",
+            "4. **Promotional Sales:** ~15.3% of sales are promotional\n",
+            "5. **Stockouts:** 36.6% of inventory snapshots show stockout conditions (all 50 products affected)\n",
+            "6. **Average Inventory:** 54.21 units on hand\n",
             "\n",
-            "sales[\"date\"] = pd.to_datetime(sales[\"date\"])\n",
-            "inventory[\"date\"] = pd.to_datetime(inventory[\"date\"])\n",
-            "products[\"launch_date\"] = pd.to_datetime(products[\"launch_date\"])\n",
+            "See `notebooks/eda_output/` for all interactive visualizations.\n",
             "\n",
-            "print(\"Data loaded successfully\")\n",
-            f"print(\"Run `python notebooks/eda_analysis.py` to generate all visualizations in notebooks/eda_output/\")\n"
-        ]
-    })
-
-nb["cells"].append({
-    "cell_type": "markdown",
-    "metadata": {},
-    "source": [
-        "---\n",
-        "\n",
-        "## Key Findings\n",
-        "\n",
-        "1. **Total Revenue:** $227.5M across 876,546 units sold\n",
-        "2. **Date Range:** 2023-08-11 to 2025-08-09 (730 days)\n",
-        "3. **Products/Stores:** 50 products across 10 stores\n",
-        "4. **Promotional Sales:** ~15.3% of sales are promotional\n",
-        "5. **Stockouts:** 36.6% of inventory snapshots show stockout conditions (all 50 products affected)\n",
-        "6. **Average Inventory:** 54.21 units on hand\n",
-        "\n",
-        "See `notebooks/eda_output/` for all interactive visualizations.\n",
-        "\n",
-        "---\n",
-        "\n",
-        "*EDA generated by `notebooks/eda_analysis.py`*"
-    ]
-})
+            "---\n",
+            "\n",
+            "*EDA generated by `notebooks/eda_analysis.py`*",
+        ],
+    }
+)
 
 output_path = "notebooks/01_exploratory_data_analysis.ipynb"
 with open(output_path, "w", encoding="utf-8") as f:

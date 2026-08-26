@@ -1,6 +1,6 @@
 # RetailSync AI - End-to-End Pipeline Summary
 
-**Generated:** 2026-08-09 19:19:30
+**Generated:** 2026-08-10 06:40:19
 
 ## Pipeline Overview
 
@@ -29,7 +29,7 @@ RetailSync AI is an end-to-end retail supply chain analytics platform that combi
 - **Best model:** Baseline Mean (historical average)
 - **Test MAE:** 4.09
 - **Test RMSE:** 6.65
-- **14-day forecast:** 18,541 units, $4,807,527.16
+- **14-day forecast:** 15,819 units, $4,089,393.00
 
 ### Inventory Intelligence
 
@@ -52,7 +52,7 @@ RetailSync AI is an end-to-end retail supply chain analytics platform that combi
 - **Store clusters (K=2):** Silhouette=0.337
   - Labels: {'High-Performance': 3, 'Low-Performance': 3, 'Stable Performance': 2, 'High-Variability': 2}
 - **Warehouse clusters (K=4):** Silhouette=0.826
-  - Labels: {'Balanced': 16, 'Overstocked': 8, 'Underutilized': 8, 'High-Utilization': 8}
+  - Labels: {'Balanced': 2, 'Overstocked': 1, 'Underutilized': 1, 'High-Utilization': 1}
 
 ### Warehouse Optimization
 
@@ -78,7 +78,7 @@ Raw Data -> Cleaning -> Feature Engineering -> Models -> Predictions -> Risk Det
 | Anomalies | `data/processed/anomalies.csv` | 31,619 |
 | Product Segments | `data/processed/product_segments.csv` | 50 |
 | Store Segments | `data/processed/store_segments.csv` | 10 |
-| Warehouse Segments | `data/processed/warehouse_segments.csv` | 40 |
+| Warehouse Segments | `data/processed/warehouse_segments.csv` | 5 |
 | Warehouse Optimization | `data/processed/warehouse_optimization.csv` | 5 |
 
 ## Model Artifacts

@@ -4,8 +4,8 @@
     "test_mae": 4.09,
     "test_rmse": 6.65,
     "forecast_horizon": "14 days",
-    "total_forecasted_demand": 18541,
-    "total_forecasted_revenue": 4807527.16
+    "total_forecasted_demand": 15819,
+    "total_forecasted_revenue": 4089393.0
   },
   "inventory": {
     "total_product_stores": 500,
@@ -47,10 +47,10 @@
       "k": 4,
       "silhouette": 0.826,
       "labels": {
-        "Balanced": 16,
-        "Overstocked": 8,
-        "Underutilized": 8,
-        "High-Utilization": 8
+        "Balanced": 2,
+        "Overstocked": 1,
+        "Underutilized": 1,
+        "High-Utilization": 1
       }
     }
   },

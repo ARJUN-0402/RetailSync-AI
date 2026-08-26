@@ -57,10 +57,18 @@ The feature engineering pipeline is **well-implemented and mostly correct**. The
 
 **Implementation (lines 197-201):**
 ```python
-cat_daily = daily_df.groupby(["date", "category"], as_index=False)["quantity_sold"].mean().rename(columns={"quantity_sold": "category_avg_demand"})
+cat_daily = (
+    daily_df.groupby(["date", "category"], as_index=False)["quantity_sold"]
+    .mean()
+    .rename(columns={"quantity_sold": "category_avg_demand"})
+)
 daily_df = daily_df.merge(cat_daily, on=["date", "category"], how="left")
 
-store_type_daily = daily_df.groupby(["date", "store_type"], as_index=False)["quantity_sold"].mean().rename(columns={"quantity_sold": "store_type_avg_demand"})
+store_type_daily = (
+    daily_df.groupby(["date", "store_type"], as_index=False)["quantity_sold"]
+    .mean()
+    .rename(columns={"quantity_sold": "store_type_avg_demand"})
+)
 daily_df = daily_df.merge(store_type_daily, on=["date", "store_type"], how="left")
 ```
 
@@ -73,8 +81,12 @@ daily_df = daily_df.merge(store_type_daily, on=["date", "store_type"], how="left
 
 **Recommendation:** Shift aggregate features by 1 day to use only past data:
 ```python
-cat_daily["category_avg_demand"] = cat_daily.groupby("category")["category_avg_demand"].shift(1)
-store_type_daily["store_type_avg_demand"] = store_type_daily.groupby("store_type")["store_type_avg_demand"].shift(1)
+cat_daily["category_avg_demand"] = cat_daily.groupby("category")[
+    "category_avg_demand"
+].shift(1)
+store_type_daily["store_type_avg_demand"] = store_type_daily.groupby("store_type")[
+    "store_type_avg_demand"
+].shift(1)
 ```
 
 ### Other Features: No Leakage Detected

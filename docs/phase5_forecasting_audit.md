@@ -58,11 +58,26 @@ test_df = df[(df["date"] > val_end) & (df["date"] <= test_end)].copy()
 **Implementation (lines 46-54):**
 ```python
 exclude_cols = [
-    "date", "product_id", "store_id", "category", "subcategory", "store_type",
-    "city", "state", "supplier_id", "warehouse_id",
-    "quantity_sold", "revenue", "unit_price", "promotion",
-    "target_demand_1d", "target_demand_7d", "target_demand_14d",
-    "target_revenue_1d", "target_revenue_7d", "target_revenue_14d"
+    "date",
+    "product_id",
+    "store_id",
+    "category",
+    "subcategory",
+    "store_type",
+    "city",
+    "state",
+    "supplier_id",
+    "warehouse_id",
+    "quantity_sold",
+    "revenue",
+    "unit_price",
+    "promotion",
+    "target_demand_1d",
+    "target_demand_7d",
+    "target_demand_14d",
+    "target_revenue_1d",
+    "target_revenue_7d",
+    "target_revenue_14d",
 ]
 feature_cols = [c for c in df.columns if c not in exclude_cols]
 ```
@@ -201,7 +216,13 @@ def smape(y_true, y_pred):
     mask = (y_true + y_pred) != 0
     if not mask.any():
         return 0.0
-    return np.mean(np.abs(y_pred[mask] - y_true[mask]) / ((np.abs(y_true[mask]) + np.abs(y_pred[mask])) / 2)) * 100
+    return (
+        np.mean(
+            np.abs(y_pred[mask] - y_true[mask])
+            / ((np.abs(y_true[mask]) + np.abs(y_pred[mask])) / 2)
+        )
+        * 100
+    )
 ```
 
 ### Issue: sMAPE is meaningless for zero-inflated data

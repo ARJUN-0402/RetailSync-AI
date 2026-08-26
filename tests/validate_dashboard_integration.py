@@ -1,7 +1,7 @@
-import pandas as pd
-import numpy as np
 import os
 import sys
+
+import pandas as pd
 from sqlalchemy import create_engine
 
 print("=== DASHBOARD INTEGRATION VALIDATION ===\n")
@@ -34,11 +34,26 @@ for f in required_files:
 print("\n2. Checking database tables...")
 engine = create_engine("sqlite:///database/retailsync.db")
 tables = pd.read_sql('SELECT name FROM sqlite_master WHERE type="table"', engine)
-required_tables = ["products", "stores", "suppliers", "warehouses", "sales", "inventory", "inventory_alerts", "anomaly_flags", "product_segments", "store_segments", "warehouse_segments", "warehouse_optimization"]
+required_tables = [
+    "products",
+    "stores",
+    "suppliers",
+    "warehouses",
+    "sales",
+    "inventory",
+    "inventory_alerts",
+    "anomaly_flags",
+    "product_segments",
+    "store_segments",
+    "warehouse_segments",
+    "warehouse_optimization",
+]
 
 for table in required_tables:
     if table in tables["name"].values:
-        count = pd.read_sql(f'SELECT COUNT(*) as cnt FROM {table}', engine).iloc[0]["cnt"]
+        count = pd.read_sql(f"SELECT COUNT(*) as cnt FROM {table}", engine).iloc[0][
+            "cnt"
+        ]
         print(f"  ✓ {table}: {count} rows")
     else:
         print(f"  ✗ MISSING: {table}")
@@ -55,6 +70,7 @@ model_files = [
 for model_file in model_files:
     if os.path.exists(model_file):
         import joblib
+
         model = joblib.load(model_file)
         print(f"  ✓ {model_file}: {type(model.get('model', model)).__name__}")
     else:
@@ -65,10 +81,11 @@ print("\n4. Checking dashboard app...")
 if os.path.exists("dashboard/app.py"):
     with open("dashboard/app.py", "r", encoding="utf-8") as f:
         dashboard_code = f.read()
-    
+
     checks = {
         "loads data from CSV": "pd.read_csv" in dashboard_code,
-        "loads data from SQL": "pd.read_sql" in dashboard_code or "read_sql" in dashboard_code,
+        "loads data from SQL": "pd.read_sql" in dashboard_code
+        or "read_sql" in dashboard_code,
         "uses cached data": "@st.cache_data" in dashboard_code,
         "has dark theme CSS": "background-color: #0e1117" in dashboard_code,
         "has Executive Overview": "Executive Overview" in dashboard_code,
@@ -80,7 +97,7 @@ if os.path.exists("dashboard/app.py"):
         "has Data Explorer page": "Data Explorer" in dashboard_code,
         "loads ML models": "joblib.load" in dashboard_code,
     }
-    
+
     for check, passed in checks.items():
         status = "✓" if passed else "✗"
         print(f"  {status} {check}")
@@ -121,8 +138,7 @@ for kpi, value in actual_kpis.items():
 
 # Check dashboard code uses these data sources
 dashboard_uses_data = (
-    "data[\"features\"]" in dashboard_code or
-    "features" in dashboard_code
+    'data["features"]' in dashboard_code or "features" in dashboard_code
 )
 
 print(f"\nDashboard uses feature data: {'✓' if dashboard_uses_data else '✗'}")

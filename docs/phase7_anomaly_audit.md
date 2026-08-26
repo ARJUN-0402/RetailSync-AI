@@ -35,17 +35,19 @@ The anomaly detection implementation is **genuine and well-executed**. All three
 
 **Implementation (lines 28-53):**
 ```python
-df["rolling_mean_30d"] = df.groupby(["product_id", "store_id"])["quantity_sold"].transform(
-    lambda x: x.shift(1).rolling(window=30, min_periods=7).mean()
+df["rolling_mean_30d"] = df.groupby(["product_id", "store_id"])[
+    "quantity_sold"
+].transform(lambda x: x.shift(1).rolling(window=30, min_periods=7).mean())
+df["rolling_std_30d"] = (
+    df.groupby(["product_id", "store_id"])["quantity_sold"]
+    .transform(lambda x: x.shift(1).rolling(window=30, min_periods=7).std())
+    .fillna(0)
 )
-df["rolling_std_30d"] = df.groupby(["product_id", "store_id"])["quantity_sold"].transform(
-    lambda x: x.shift(1).rolling(window=30, min_periods=7).std()
-).fillna(0)
 
 df["z_score"] = np.where(
     df["rolling_std_30d"] > 0,
     (df["quantity_sold"] - df["rolling_mean_30d"]) / df["rolling_std_30d"],
-    0
+    0,
 )
 ```
 
@@ -87,13 +89,19 @@ df["iqr_upper"] = q3 + 1.5 * iqr
 
 **Implementation (lines 90-125):**
 ```python
-iso_features = df.groupby(["product_id", "store_id"]).agg({
-    "quantity_sold": ["mean", "std", "max", "min"],
-    "revenue": ["mean", "std"],
-    "demand_cv_28d": "last",
-    "demand_rolling_mean_7d": "last",
-    "stock_coverage_days": "last",
-}).reset_index()
+iso_features = (
+    df.groupby(["product_id", "store_id"])
+    .agg(
+        {
+            "quantity_sold": ["mean", "std", "max", "min"],
+            "revenue": ["mean", "std"],
+            "demand_cv_28d": "last",
+            "demand_rolling_mean_7d": "last",
+            "stock_coverage_days": "last",
+        }
+    )
+    .reset_index()
+)
 
 scaler = StandardScaler()
 X_iso = scaler.fit_transform(iso_features.iloc[:, 2:])

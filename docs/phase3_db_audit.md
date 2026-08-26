@@ -83,7 +83,9 @@ However, in SQLite, `PRAGMA foreign_keys = ON` is a **per-connection setting**, 
 I tested by attempting to insert an orphan record:
 ```python
 # Attempting to insert sale with non-existent product_id
-c.execute('INSERT INTO sales (date, product_id, store_id, ...) VALUES ("2025-08-10", "P999", "ST01", ...)')
+c.execute(
+    'INSERT INTO sales (date, product_id, store_id, ...) VALUES ("2025-08-10", "P999", "ST01", ...)'
+)
 ```
 
 **Result:** The insert succeeded. Foreign key constraint was NOT enforced.
@@ -116,10 +118,13 @@ engine = create_engine("sqlite:///database/retailsync.db")
 
 Add foreign key enforcement to all SQLAlchemy engines:
 ```python
-engine = create_engine("sqlite:///database/retailsync.db", 
-                       execution_options={"sqlite_raw_colnames": True})
+engine = create_engine(
+    "sqlite:///database/retailsync.db", execution_options={"sqlite_raw_colnames": True}
+)
 # Or use event listener:
 from sqlalchemy import event
+
+
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()

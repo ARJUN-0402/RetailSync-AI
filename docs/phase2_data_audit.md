@@ -53,12 +53,22 @@ The data pipeline is **functional and reproducible**, but the synthetic data has
 for date in dates:
     for store_id in stores["store_id"]:
         n_products = np.random.randint(5, 15)  # Random 5-15 products per store per day
-        sampled_products = np.random.choice(products["product_id"], n_products, replace=False)
+        sampled_products = np.random.choice(
+            products["product_id"], n_products, replace=False
+        )
         for product_id in sampled_products:
             base_demand = np.random.randint(1, 20)
-            seasonal_factor = 1.3 if Electronics and Nov-Dec else 1.2 if Clothing and summer else 1.0
+            seasonal_factor = (
+                1.3
+                if Electronics and Nov - Dec
+                else 1.2
+                if Clothing and summer
+                else 1.0
+            )
             trend_factor = 1 + (date - start_date).days / (DAYS * 2)
-            quantity = max(0, int(np.random.poisson(base_demand * seasonal_factor * trend_factor)))
+            quantity = max(
+                0, int(np.random.poisson(base_demand * seasonal_factor * trend_factor))
+            )
 ```
 
 **Issues:**

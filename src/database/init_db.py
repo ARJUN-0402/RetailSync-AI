@@ -1,7 +1,7 @@
-import pandas as pd
 import os
+
+import pandas as pd
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
 
 DATABASE_PATH = "database/retailsync.db"
 PROCESSED_DIR = "data/processed"
@@ -14,6 +14,7 @@ TABLES = {
     "sales": "sales.csv",
     "inventory": "inventory.csv",
 }
+
 
 def create_database():
     if os.path.exists(DATABASE_PATH):
@@ -31,6 +32,7 @@ def create_database():
         print("Schema created successfully.")
     return engine
 
+
 def load_data(engine):
     for table_name, filename in TABLES.items():
         filepath = os.path.join(PROCESSED_DIR, filename)
@@ -39,6 +41,7 @@ def load_data(engine):
         df = pd.read_csv(filepath)
         df.to_sql(table_name, con=engine, if_exists="append", index=False)
         print(f"Loaded {len(df)} rows into {table_name}")
+
 
 def validate_relationships(engine):
     queries = {
@@ -92,6 +95,7 @@ def validate_relationships(engine):
             status = "OK" if orphan_count == 0 else f"FAIL ({orphan_count} orphans)"
             print(f"  {name}: {status}")
 
+
 def run_sample_analytics(engine):
     print("\n--- Sample Analytics ---")
     queries = {
@@ -140,6 +144,7 @@ def run_sample_analytics(engine):
             for row in result:
                 print(f"  {row}")
 
+
 def main():
     print("=== RetailSync AI Database Initialization ===")
     engine = create_database()
@@ -149,6 +154,7 @@ def main():
     validate_relationships(engine)
     run_sample_analytics(engine)
     print("\nDatabase initialization complete.")
+
 
 if __name__ == "__main__":
     main()

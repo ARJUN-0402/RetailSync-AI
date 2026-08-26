@@ -247,7 +247,9 @@ The other test files (`validate_db.py`, `validate_features.py`, `validate_querie
 ### 9.5 Medium: Data leakage in aggregate features (`feature_engineering.py:197-201`)
 
 ```python
-cat_daily = daily_df.groupby(["date", "category"], as_index=False)["quantity_sold"].mean()
+cat_daily = daily_df.groupby(["date", "category"], as_index=False)[
+    "quantity_sold"
+].mean()
 daily_df = daily_df.merge(cat_daily, on=["date", "category"], how="left")
 ```
 

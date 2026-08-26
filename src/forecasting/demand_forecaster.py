@@ -1,13 +1,24 @@
-import pandas as pd
-import numpy as np
 import os
+import sys
 import time
-import joblib
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
+import joblib
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
+
+_project_root = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+sys.path.insert(0, _project_root)
+from src.models.baselines import (  # noqa: E402
+    BaselineMeanPredictor,
+    MovingAveragePredictor,
+    NaivePredictor,
+)
 
 np.random.seed(42)
 
@@ -33,9 +44,15 @@ train_df = df[df["date"] <= train_end].copy()
 val_df = df[(df["date"] > train_end) & (df["date"] <= val_end)].copy()
 test_df = df[(df["date"] > val_end) & (df["date"] <= test_end)].copy()
 
-print(f"Train: {train_df['date'].min().date()} to {train_df['date'].max().date()} ({len(train_df):,} rows)")
-print(f"Validation: {val_df['date'].min().date()} to {val_df['date'].max().date()} ({len(val_df):,} rows)")
-print(f"Test: {test_df['date'].min().date()} to {test_df['date'].max().date()} ({len(test_df):,} rows)")
+print(
+    f"Train: {train_df['date'].min().date()} to {train_df['date'].max().date()} ({len(train_df):,} rows)"
+)
+print(
+    f"Validation: {val_df['date'].min().date()} to {val_df['date'].max().date()} ({len(val_df):,} rows)"
+)
+print(
+    f"Test: {test_df['date'].min().date()} to {test_df['date'].max().date()} ({len(test_df):,} rows)"
+)
 
 # ============================================================
 # 2. FEATURE SELECTION
@@ -44,18 +61,33 @@ print("\n=== 2. FEATURE SELECTION ===")
 
 # Define feature columns (exclude identifiers, targets, and raw sales columns)
 exclude_cols = [
-    "date", "product_id", "store_id", "category", "subcategory", "store_type",
-    "city", "state", "supplier_id", "warehouse_id",
-    "quantity_sold", "revenue", "unit_price", "promotion",
-    "target_demand_1d", "target_demand_7d", "target_demand_14d",
-    "target_revenue_1d", "target_revenue_7d", "target_revenue_14d"
+    "date",
+    "product_id",
+    "store_id",
+    "category",
+    "subcategory",
+    "store_type",
+    "city",
+    "state",
+    "supplier_id",
+    "warehouse_id",
+    "quantity_sold",
+    "revenue",
+    "unit_price",
+    "promotion",
+    "target_demand_1d",
+    "target_demand_7d",
+    "target_demand_14d",
+    "target_revenue_1d",
+    "target_revenue_7d",
+    "target_revenue_14d",
 ]
 
 feature_cols = [c for c in df.columns if c not in exclude_cols]
 print(f"Selected {len(feature_cols)} features")
 
 # Check for any remaining non-numeric columns
-non_numeric = [c for c in feature_cols if df[c].dtype == 'object']
+non_numeric = [c for c in feature_cols if df[c].dtype == "object"]
 if non_numeric:
     print(f"WARNING: Non-numeric features found: {non_numeric}")
     feature_cols = [c for c in feature_cols if c not in non_numeric]
@@ -78,12 +110,20 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 # ============================================================
 print("\n=== 3. BASELINE MODELS ===")
 
+
 def smape(y_true, y_pred):
     """Symmetric Mean Absolute Percentage Error"""
     mask = (y_true + y_pred) != 0
     if not mask.any():
         return 0.0
-    return np.mean(np.abs(y_pred[mask] - y_true[mask]) / ((np.abs(y_true[mask]) + np.abs(y_pred[mask])) / 2)) * 100
+    return (
+        np.mean(
+            np.abs(y_pred[mask] - y_true[mask])
+            / ((np.abs(y_true[mask]) + np.abs(y_pred[mask])) / 2)
+        )
+        * 100
+    )
+
 
 def evaluate_model(y_true, y_pred, model_name):
     """Evaluate model with multiple metrics"""
@@ -91,31 +131,37 @@ def evaluate_model(y_true, y_pred, model_name):
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     r2 = r2_score(y_true, y_pred)
     s = smape(y_true, y_pred)
-    
+
     print(f"\n{model_name}:")
     print(f"  MAE:   {mae:.4f}")
     print(f"  RMSE:  {rmse:.4f}")
     print(f"  R²:    {r2:.4f}")
     print(f"  sMAPE: {s:.2f}%")
-    
+
     return {"model": model_name, "mae": mae, "rmse": rmse, "r2": r2, "smape": s}
+
 
 results = []
 
 # Baseline 1: Historical Mean (train set mean)
 print("\nTraining Baseline 1: Historical Mean...")
-train_mean = np.mean(y_train)
-y_pred_mean = np.full(len(y_val), train_mean)
+baseline_mean_model = BaselineMeanPredictor(n_features=len(feature_cols))
+baseline_mean_model.fit(X_train, y_train)
+y_pred_mean = baseline_mean_model.predict(val_df[feature_cols].values)
 results.append(evaluate_model(y_val, y_pred_mean, "Baseline_Mean"))
 
 # Baseline 2: Naive (last known value = lag_1d)
 print("\nTraining Baseline 2: Naive (lag_1d)...")
-y_pred_naive = val_df["demand_lag_1d"].values
+naive_model = NaivePredictor(lag_col="demand_lag_1d", n_features=len(feature_cols))
+y_pred_naive = naive_model.predict(val_df)
 results.append(evaluate_model(y_val, y_pred_naive, "Baseline_Naive"))
 
 # Baseline 3: Moving Average (7-day rolling mean)
 print("\nTraining Baseline 3: Moving Average (7d)...")
-y_pred_ma = val_df["demand_rolling_mean_7d"].values
+ma_model = MovingAveragePredictor(
+    rolling_col="demand_rolling_mean_7d", n_features=len(feature_cols)
+)
+y_pred_ma = ma_model.predict(val_df)
 results.append(evaluate_model(y_val, y_pred_ma, "Baseline_MA_7d"))
 
 # ============================================================
@@ -133,7 +179,7 @@ rf_model = RandomForestRegressor(
     min_samples_leaf=5,
     random_state=42,
     n_jobs=-1,
-    verbose=0
+    verbose=0,
 )
 rf_model.fit(X_train, y_train)
 y_pred_rf = rf_model.predict(X_val)
@@ -152,7 +198,7 @@ xgb_model = XGBRegressor(
     colsample_bytree=0.8,
     random_state=42,
     n_jobs=-1,
-    verbosity=0
+    verbosity=0,
 )
 xgb_model.fit(X_train, y_train)
 y_pred_xgb = xgb_model.predict(X_val)
@@ -178,14 +224,25 @@ print(f"\nBest model: {best_model_name}")
 # ============================================================
 print("\n=== 6. TEST SET EVALUATION ===")
 
-if "RandomForest" in best_model_name:
+if best_model_name == "Baseline_Mean":
+    best_model = baseline_mean_model
+    y_pred_test = best_model.predict(test_df[feature_cols].values)
+elif best_model_name == "Baseline_Naive":
+    best_model = naive_model
+    y_pred_test = best_model.predict(test_df)
+elif best_model_name == "Baseline_MA_7d":
+    best_model = ma_model
+    y_pred_test = best_model.predict(test_df)
+elif "RandomForest" in best_model_name:
     best_model = rf_model
+    y_pred_test = best_model.predict(X_test)
 elif "XGBoost" in best_model_name:
     best_model = xgb_model
+    y_pred_test = best_model.predict(X_test)
 else:
-    best_model = rf_model  # fallback
+    best_model = rf_model
+    y_pred_test = best_model.predict(X_test)
 
-y_pred_test = best_model.predict(X_test)
 test_metrics = evaluate_model(y_test, y_pred_test, f"{best_model_name} (Test Set)")
 
 # ============================================================
@@ -193,20 +250,23 @@ test_metrics = evaluate_model(y_test, y_pred_test, f"{best_model_name} (Test Set
 # ============================================================
 print("\n=== 7. FEATURE IMPORTANCE ===")
 
-if hasattr(best_model, "feature_importances_"):
-    importance_df = pd.DataFrame({
-        "feature": feature_cols,
-        "importance": best_model.feature_importances_
-    }).sort_values("importance", ascending=False)
-    
+if hasattr(best_model, "feature_importances_") and not isinstance(
+    best_model, BaselineMeanPredictor
+):
+    importance_df = pd.DataFrame(
+        {"feature": feature_cols, "importance": best_model.feature_importances_}
+    ).sort_values("importance", ascending=False)
+
     print("\nTop 15 Most Important Features:")
     print(importance_df.head(15).to_string(index=False))
-    
+
     # Save feature importance
     importance_df.to_csv("docs/feature_importance.csv", index=False)
-    print(f"\nSaved feature importance to docs/feature_importance.csv")
+    print("\nSaved feature importance to docs/feature_importance.csv")
 else:
-    print("Model does not support feature importance.")
+    print(
+        "Model does not support feature importance (baseline predictors have no feature importance)."
+    )
 
 # ============================================================
 # 8. SAVE MODEL
@@ -218,19 +278,19 @@ os.makedirs("models", exist_ok=True)
 model_package = {
     "model": best_model,
     "feature_cols": feature_cols,
-    "train_mean": train_mean,
+    "train_mean": getattr(baseline_mean_model, "train_mean_", 0.0),
     "metrics": test_metrics,
     "model_name": best_model_name,
-    "trained_at": datetime.now().isoformat(),
+    "trained_at": datetime.now(timezone.utc).isoformat(),
     "data_splits": {
         "train_end": train_end.isoformat(),
         "val_end": val_end.isoformat(),
-        "test_end": test_end.isoformat()
-    }
+        "test_end": test_end.isoformat(),
+    },
 }
 
 joblib.dump(model_package, "models/demand_forecaster.pkl")
-print(f"Saved model to models/demand_forecaster.pkl")
+print("Saved model to models/demand_forecaster.pkl")
 
 # ============================================================
 # 9. SAMPLE PREDICTIONS
@@ -242,7 +302,9 @@ for idx in sample_indices[:5]:
     row = test_df.iloc[idx]
     actual = row["target_demand_1d"]
     pred = y_pred_test[idx]
-    print(f"  {row['date'].date()} | {row['product_id']} | {row['store_id']} | Actual: {actual:.1f} | Predicted: {pred:.1f}")
+    print(
+        f"  {row['date'].date()} | {row['product_id']} | {row['store_id']} | Actual: {actual:.1f} | Predicted: {pred:.1f}"
+    )
 
 # ============================================================
 # 10. SUMMARY
@@ -253,7 +315,7 @@ print(f"Test MAE: {test_metrics['mae']:.4f}")
 print(f"Test RMSE: {test_metrics['rmse']:.4f}")
 print(f"Test R²: {test_metrics['r2']:.4f}")
 print(f"Test sMAPE: {test_metrics['smape']:.2f}%")
-print(f"\nNote: High zero-inflation (~81% zeros) makes sMAPE less reliable.")
-print(f"MAE and RMSE are primary metrics for this dataset.")
+print("\nNote: High zero-inflation (~81% zeros) makes sMAPE less reliable.")
+print("MAE and RMSE are primary metrics for this dataset.")
 
 print("\nForecasting pipeline complete.")

@@ -1,9 +1,11 @@
-import pandas as pd
-import numpy as np
 import os
 import time
+
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
+from sqlalchemy import create_engine, text
 
 np.random.seed(42)
 
@@ -26,18 +28,20 @@ print("\n=== 1. ROLLING Z-SCORE METHOD ===")
 start_time = time.time()
 
 # Calculate rolling statistics per product-store
-df["rolling_mean_30d"] = df.groupby(["product_id", "store_id"])["quantity_sold"].transform(
-    lambda x: x.shift(1).rolling(window=30, min_periods=7).mean()
+df["rolling_mean_30d"] = df.groupby(["product_id", "store_id"])[
+    "quantity_sold"
+].transform(lambda x: x.shift(1).rolling(window=30, min_periods=7).mean())
+df["rolling_std_30d"] = (
+    df.groupby(["product_id", "store_id"])["quantity_sold"]
+    .transform(lambda x: x.shift(1).rolling(window=30, min_periods=7).std())
+    .fillna(0)
 )
-df["rolling_std_30d"] = df.groupby(["product_id", "store_id"])["quantity_sold"].transform(
-    lambda x: x.shift(1).rolling(window=30, min_periods=7).std()
-).fillna(0)
 
 # Calculate Z-score
 df["z_score"] = np.where(
     df["rolling_std_30d"] > 0,
     (df["quantity_sold"] - df["rolling_mean_30d"]) / df["rolling_std_30d"],
-    0
+    0,
 )
 
 # Classify anomalies
@@ -49,7 +53,7 @@ df.loc[df["z_score"] < -3, "anomaly_zscore"] = "Significant Drop"
 
 zscore_time = time.time() - start_time
 print(f"Rolling Z-score completed in {zscore_time:.1f}s")
-print(f"Z-score distribution:")
+print("Z-score distribution:")
 print(df["anomaly_zscore"].value_counts())
 
 # ============================================================
@@ -77,7 +81,7 @@ df.loc[df["quantity_sold"] < df["iqr_lower"], "anomaly_iqr"] = "Significant Drop
 
 iqr_time = time.time() - start_time
 print(f"IQR method completed in {iqr_time:.1f}s")
-print(f"IQR anomaly distribution:")
+print("IQR anomaly distribution:")
 print(df["anomaly_iqr"].value_counts())
 
 # ============================================================
@@ -89,16 +93,24 @@ start_time = time.time()
 
 # Prepare features for Isolation Forest
 # Use product-store level features
-iso_features = df.groupby(["product_id", "store_id"]).agg({
-    "quantity_sold": ["mean", "std", "max", "min"],
-    "revenue": ["mean", "std"],
-    "demand_cv_28d": "last",
-    "demand_rolling_mean_7d": "last",
-    "stock_coverage_days": "last",
-}).reset_index()
+iso_features = (
+    df.groupby(["product_id", "store_id"])
+    .agg(
+        {
+            "quantity_sold": ["mean", "std", "max", "min"],
+            "revenue": ["mean", "std"],
+            "demand_cv_28d": "last",
+            "demand_rolling_mean_7d": "last",
+            "stock_coverage_days": "last",
+        }
+    )
+    .reset_index()
+)
 
 # Flatten column names
-iso_features.columns = ["product_id", "store_id"] + [f"{col[0]}_{col[1]}" for col in iso_features.columns[2:]]
+iso_features.columns = ["product_id", "store_id"] + [
+    f"{col[0]}_{col[1]}" for col in iso_features.columns[2:]
+]
 
 # Fill NaN
 iso_features = iso_features.fillna(0)
@@ -121,18 +133,19 @@ iso_features.loc[iso_predictions == -1, "anomaly_isolation"] = "Anomaly"
 df = df.merge(
     iso_features[["product_id", "store_id", "anomaly_isolation"]],
     on=["product_id", "store_id"],
-    how="left"
+    how="left",
 )
 
 iso_time = time.time() - start_time
 print(f"Isolation Forest completed in {iso_time:.1f}s")
-print(f"Isolation Forest anomaly distribution:")
+print("Isolation Forest anomaly distribution:")
 print(df["anomaly_isolation"].value_counts())
 
 # ============================================================
 # 4. ENSEMBLE ANOMALY DETECTION
 # ============================================================
 print("\n=== 4. ENSEMBLE ANOMALY DETECTION ===")
+
 
 # Combine methods: flag as anomaly if 2+ methods agree
 def ensemble_anomaly(row):
@@ -143,7 +156,7 @@ def ensemble_anomaly(row):
         votes += 1
     if row["anomaly_isolation"] == "Anomaly":
         votes += 1
-    
+
     if votes >= 2:
         return "Anomaly"
     elif votes == 1:
@@ -151,9 +164,10 @@ def ensemble_anomaly(row):
     else:
         return "Normal"
 
+
 df["anomaly_ensemble"] = df.apply(ensemble_anomaly, axis=1)
 
-print(f"Ensemble anomaly distribution:")
+print("Ensemble anomaly distribution:")
 print(df["anomaly_ensemble"].value_counts())
 
 # ============================================================
@@ -162,17 +176,29 @@ print(df["anomaly_ensemble"].value_counts())
 print("\n=== 5. DETAILED ANOMALY ANALYSIS ===")
 
 anomalies = df[df["anomaly_ensemble"] == "Anomaly"].copy()
-print(f"Total anomalous records: {len(anomalies)} ({len(anomalies)/len(df)*100:.2f}%)")
+print(
+    f"Total anomalous records: {len(anomalies)} ({len(anomalies) / len(df) * 100:.2f}%)"
+)
 
 # Anomaly breakdown by type
 anomalies["anomaly_type"] = "Unknown"
-anomalies.loc[anomalies["anomaly_zscore"] == "Significant Spike", "anomaly_type"] = "Demand Spike"
-anomalies.loc[anomalies["anomaly_zscore"] == "Significant Drop", "anomaly_type"] = "Demand Drop"
-anomalies.loc[anomalies["anomaly_iqr"] == "Significant Spike", "anomaly_type"] = "Demand Spike"
-anomalies.loc[anomalies["anomaly_iqr"] == "Significant Drop", "anomaly_type"] = "Demand Drop"
-anomalies.loc[anomalies["anomaly_isolation"] == "Anomaly", "anomaly_type"] = "Unusual Pattern"
+anomalies.loc[anomalies["anomaly_zscore"] == "Significant Spike", "anomaly_type"] = (
+    "Demand Spike"
+)
+anomalies.loc[anomalies["anomaly_zscore"] == "Significant Drop", "anomaly_type"] = (
+    "Demand Drop"
+)
+anomalies.loc[anomalies["anomaly_iqr"] == "Significant Spike", "anomaly_type"] = (
+    "Demand Spike"
+)
+anomalies.loc[anomalies["anomaly_iqr"] == "Significant Drop", "anomaly_type"] = (
+    "Demand Drop"
+)
+anomalies.loc[anomalies["anomaly_isolation"] == "Anomaly", "anomaly_type"] = (
+    "Unusual Pattern"
+)
 
-print(f"\nAnomaly types:")
+print("\nAnomaly types:")
 print(anomalies["anomaly_type"].value_counts())
 
 # Get category and store info from features
@@ -182,7 +208,7 @@ store_info = df[["store_id", "store_type", "city", "state"]].drop_duplicates()
 # Anomalies by category
 anomalies_with_cat = anomalies.merge(product_info, on="product_id", how="left")
 if "category" in anomalies_with_cat.columns:
-    print(f"\nAnomalies by category:")
+    print("\nAnomalies by category:")
     print(anomalies_with_cat["category"].value_counts())
 else:
     print("Warning: category column not available")
@@ -190,19 +216,29 @@ else:
 # Anomalies by store type
 anomalies_with_store = anomalies.merge(store_info, on="store_id", how="left")
 if "store_type" in anomalies_with_store.columns:
-    print(f"\nAnomalies by store type:")
+    print("\nAnomalies by store type:")
     print(anomalies_with_store["store_type"].value_counts())
 else:
     print("Warning: store_type column not available")
 
 # Top anomalous product-store combinations
-anomaly_freq = anomalies.groupby(["product_id", "store_id"]).size().reset_index(name="anomaly_count")
-top_anomalies = anomaly_freq.merge(product_info, on="product_id", how="left").merge(
-    store_info[["store_id", "store_type", "city"]], on="store_id", how="left"
-).sort_values("anomaly_count", ascending=False)
+anomaly_freq = (
+    anomalies.groupby(["product_id", "store_id"])
+    .size()
+    .reset_index(name="anomaly_count")
+)
+top_anomalies = (
+    anomaly_freq.merge(product_info, on="product_id", how="left")
+    .merge(store_info[["store_id", "store_type", "city"]], on="store_id", how="left")
+    .sort_values("anomaly_count", ascending=False)
+)
 
-print(f"\nTop 10 most anomalous product-store combinations:")
-print(top_anomalies.head(10)[["product_id", "store_id", "category", "store_type", "city", "anomaly_count"]].to_string(index=False))
+print("\nTop 10 most anomalous product-store combinations:")
+print(
+    top_anomalies.head(10)[
+        ["product_id", "store_id", "category", "store_type", "city", "anomaly_count"]
+    ].to_string(index=False)
+)
 
 # ============================================================
 # 6. SAVE ANOMALY RESULTS
@@ -231,26 +267,29 @@ anomaly_summary = {
     "demand_spikes": (anomalies["anomaly_type"] == "Demand Spike").sum(),
     "demand_drops": (anomalies["anomaly_type"] == "Demand Drop").sum(),
     "unusual_patterns": (anomalies["anomaly_type"] == "Unusual Pattern").sum(),
-    "top_anomalous_product": top_anomalies.iloc[0]["product_id"] if len(top_anomalies) > 0 else "N/A",
-    "top_anomalous_store": top_anomalies.iloc[0]["store_id"] if len(top_anomalies) > 0 else "N/A",
+    "top_anomalous_product": top_anomalies.iloc[0]["product_id"]
+    if len(top_anomalies) > 0
+    else "N/A",
+    "top_anomalous_store": top_anomalies.iloc[0]["store_id"]
+    if len(top_anomalies) > 0
+    else "N/A",
 }
 
 anomaly_summary_df = pd.DataFrame([anomaly_summary])
 anomaly_summary_df.to_csv("data/processed/anomaly_summary.csv", index=False)
-print(f"Saved: data/processed/anomaly_summary.csv")
+print("Saved: data/processed/anomaly_summary.csv")
 
 # ============================================================
 # 7. UPDATE DATABASE
 # ============================================================
 print("\n=== 7. UPDATING DATABASE ===")
 
-from sqlalchemy import create_engine, text
-
 engine = create_engine("sqlite:///database/retailsync.db")
 
 with engine.connect() as conn:
     # Create anomaly flags table
-    conn.execute(text("""
+    conn.execute(
+        text("""
         CREATE TABLE IF NOT EXISTS anomaly_flags (
             anomaly_id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
@@ -266,24 +305,44 @@ with engine.connect() as conn:
             FOREIGN KEY (product_id) REFERENCES products(product_id),
             FOREIGN KEY (store_id) REFERENCES stores(store_id)
         )
-    """))
-    
+    """)
+    )
+
     # Create indexes
-    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_anomaly_date ON anomaly_flags(date)"))
-    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_anomaly_product ON anomaly_flags(product_id)"))
-    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_anomaly_store ON anomaly_flags(store_id)"))
-    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_anomaly_type ON anomaly_flags(anomaly_type)"))
+    conn.execute(
+        text("CREATE INDEX IF NOT EXISTS idx_anomaly_date ON anomaly_flags(date)")
+    )
+    conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS idx_anomaly_product ON anomaly_flags(product_id)"
+        )
+    )
+    conn.execute(
+        text("CREATE INDEX IF NOT EXISTS idx_anomaly_store ON anomaly_flags(store_id)")
+    )
+    conn.execute(
+        text(
+            "CREATE INDEX IF NOT EXISTS idx_anomaly_type ON anomaly_flags(anomaly_type)"
+        )
+    )
     conn.commit()
-    
+
     # Clear existing anomalies
     conn.execute(text("DELETE FROM anomaly_flags"))
     conn.commit()
-    
+
     # Insert anomalies
-    cols_to_insert = ["date", "product_id", "store_id", "quantity_sold", "anomaly_type", "z_score"]
+    cols_to_insert = [
+        "date",
+        "product_id",
+        "store_id",
+        "quantity_sold",
+        "anomaly_type",
+        "z_score",
+    ]
     available_cols = [c for c in cols_to_insert if c in anomalies.columns]
     insert_df = anomalies[available_cols].copy()
-    
+
     # Add category and store info if available
     if "category" in anomalies.columns:
         insert_df["category"] = anomalies["category"]
@@ -291,21 +350,16 @@ with engine.connect() as conn:
         insert_df["store_type"] = anomalies["store_type"]
     if "city" in anomalies.columns:
         insert_df["city"] = anomalies["city"]
-    
+
     # Calculate method agreement (how many methods flagged this as anomaly)
     insert_df["method_agreement"] = (
-        (anomalies["anomaly_zscore"] != "Normal").astype(int) +
-        (anomalies["anomaly_iqr"] != "Normal").astype(int) +
-        (anomalies["anomaly_isolation"] == "Anomaly").astype(int)
+        (anomalies["anomaly_zscore"] != "Normal").astype(int)
+        + (anomalies["anomaly_iqr"] != "Normal").astype(int)
+        + (anomalies["anomaly_isolation"] == "Anomaly").astype(int)
     )
-    
-    insert_df.to_sql(
-        "anomaly_flags",
-        con=engine,
-        if_exists="append",
-        index=False
-    )
-    
+
+    insert_df.to_sql("anomaly_flags", con=engine, if_exists="append", index=False)
+
     count = conn.execute(text("SELECT COUNT(*) FROM anomaly_flags")).fetchone()[0]
     print(f"Loaded {count} anomalies into database")
 
@@ -317,10 +371,10 @@ print("\n=== 8. METHOD COMPARISON ===")
 print(f"""
 Method               | Anomalies | % of Total | Time (s)
 ---------------------|-----------|------------|----------
-Rolling Z-Score      | {(df['anomaly_zscore'] != 'Normal').sum():>9} | {(df['anomaly_zscore'] != 'Normal').mean()*100:>9.2f}% | {zscore_time:>8.1f}
-IQR Method           | {(df['anomaly_iqr'] != 'Normal').sum():>9} | {(df['anomaly_iqr'] != 'Normal').mean()*100:>9.2f}% | {iqr_time:>8.1f}
-Isolation Forest     | {(df['anomaly_isolation'] == 'Anomaly').sum():>9} | {(df['anomaly_isolation'] == 'Anomaly').mean()*100:>9.2f}% | {iso_time:>8.1f}
-Ensemble (Selected)  | {(df['anomaly_ensemble'] == 'Anomaly').sum():>9} | {(df['anomaly_ensemble'] == 'Anomaly').mean()*100:>9.2f}% | {'N/A':>8}
+Rolling Z-Score      | {(df["anomaly_zscore"] != "Normal").sum():>9} | {(df["anomaly_zscore"] != "Normal").mean() * 100:>9.2f}% | {zscore_time:>8.1f}
+IQR Method           | {(df["anomaly_iqr"] != "Normal").sum():>9} | {(df["anomaly_iqr"] != "Normal").mean() * 100:>9.2f}% | {iqr_time:>8.1f}
+Isolation Forest     | {(df["anomaly_isolation"] == "Anomaly").sum():>9} | {(df["anomaly_isolation"] == "Anomaly").mean() * 100:>9.2f}% | {iso_time:>8.1f}
+Ensemble (Selected)  | {(df["anomaly_ensemble"] == "Anomaly").sum():>9} | {(df["anomaly_ensemble"] == "Anomaly").mean() * 100:>9.2f}% | {"N/A":>8}
 """)
 
 print("Selected method: Ensemble (requires 2+ method agreement)")
@@ -333,8 +387,10 @@ print("\n=== 9. SAMPLE ANOMALIES ===")
 
 sample_anomalies = anomalies.head(10)
 for _, row in sample_anomalies.iterrows():
-    print(f"  {row['date'].date()} | {row['product_id']} | {row['store_id']} | "
-          f"Qty: {row['quantity_sold']:.0f} | Z: {row['z_score']:.2f} | "
-          f"Type: {row['anomaly_type']}")
+    print(
+        f"  {row['date'].date()} | {row['product_id']} | {row['store_id']} | "
+        f"Qty: {row['quantity_sold']:.0f} | Z: {row['z_score']:.2f} | "
+        f"Type: {row['anomaly_type']}"
+    )
 
 print("\nAnomaly detection complete.")

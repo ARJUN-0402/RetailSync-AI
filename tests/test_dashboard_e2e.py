@@ -7,9 +7,9 @@ so we can verify live CSV/SQL/model wiring produces sane outputs.
 
 import os
 import sys
-import pandas as pd
-import numpy as np
+
 import joblib
+import pandas as pd
 from sqlalchemy import create_engine, text
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -167,11 +167,17 @@ def main():
     print(f"  [OK] High-risk alerts: {len(high_alerts)}")
 
     # Segmentation page: cluster counts
-    product_clusters = data["product_segments"].get("cluster", data["product_segments"].get("product_cluster"))
-    print(f"  [OK] Product cluster counts:\n{product_clusters.value_counts().to_dict()}")
+    product_clusters = data["product_segments"].get(
+        "cluster", data["product_segments"].get("product_cluster")
+    )
+    print(
+        f"  [OK] Product cluster counts:\n{product_clusters.value_counts().to_dict()}"
+    )
 
     # Warehouse page: utilization summary
-    print(f"  [OK] Warehouse utilization:\n{wh_opt[['warehouse_id','utilization_pct']].to_dict(orient='records')}")
+    print(
+        f"  [OK] Warehouse utilization:\n{wh_opt[['warehouse_id', 'utilization_pct']].to_dict(orient='records')}"
+    )
 
     print("\n=== END-TO-END DASHBOARD TEST PASSED ===")
     return 0

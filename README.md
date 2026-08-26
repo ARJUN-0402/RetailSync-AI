@@ -18,18 +18,6 @@ Retailers face persistent supply-chain challenges that directly impact profitabi
 
 RetailSync AI addresses these challenges through a unified data science pipeline that generates synthetic retail data with realistic patterns, engineers 74 time-safe features, compares forecasting approaches, detects inventory risks, identifies demand anomalies, segments business entities, and analyzes warehouse utilization — all surfaced through an interactive dark-themed dashboard.
 
----
-
-## Demo & Resources
-
-| Resource | Link |
-|---|---|
-| Live Demo | `ADD-LIVE-DEMO-URL` |
-| GitHub Repository | `ADD-GITHUB-URL` |
-
-### Dashboard Preview
-
-![Dashboard Preview](docs/images/dashboard.png)
 
 ---
 
@@ -162,15 +150,15 @@ data/processed/forecasts_next_14d.csv  (7,000 rows)
 | Metric | Value |
 |--------|-------|
 | Best Model | Baseline Mean (historical average) |
-| Test MAE | 4.57 units |
+| Test MAE | 4.31 units |
 | Test RMSE | 7.20 units |
-| Test R² | -0.0071 |
-| Test sMAPE | 185.82% |
+| Test R² | -0.0076 |
+| Test sMAPE | 186.93% |
 | Forecast Horizon | 14 days |
-| Total Forecasted Demand | 18,541 units |
-| Total Forecasted Revenue | $4,807,527 |
+| Total Forecasted Demand | 15,820 units |
+| Total Forecasted Revenue | $4,089,393 |
 
-**Key technical finding:** The baseline mean performs best on the validation set due to high zero-inflation (81.42% of daily demand values are zero) and low signal-to-noise ratio at daily granularity. Random Forest and XGBoost do not outperform the simple mean on this target. The sMAPE of 185.82% confirms that percentage-based metrics are not meaningful for zero-inflated data — MAE and RMSE are the primary metrics for evaluation.
+**Key technical finding:** The baseline mean performs best on the validation set due to high zero-inflation (81.42% of daily demand values are zero) and low signal-to-noise ratio at daily granularity. Random Forest and XGBoost do not outperform the simple mean on this target. The sMAPE of 186.93% confirms that percentage-based metrics are not meaningful for zero-inflated data — MAE and RMSE are the primary metrics for evaluation.
 
 ### Inventory Intelligence
 
@@ -213,16 +201,14 @@ data/processed/forecasts_next_14d.csv  (7,000 rows)
 | Stable Performance | 2 |
 | High-Variability | 2 |
 
-**Warehouses (K=4, Silhouette=0.826):**
+**Warehouses (K=2, Silhouette=0.212):**
 
 | Label | Count |
 |-------|-------|
-| Balanced | 16 |
-| Overstocked | 8 |
-| Underutilized | 8 |
-| High-Utilization | 8 |
-
-> *Note: Warehouse segment labels are assigned per warehouse-supplier pair in the CSV export. The database table correctly contains 5 warehouses with no duplicates.*
+| Balanced | 2 |
+| Overstocked | 1 |
+| Underutilized | 1 |
+| High-Utilization | 1 |
 
 ### Warehouse Intelligence
 
@@ -246,7 +232,7 @@ data/processed/forecasts_next_14d.csv  (7,000 rows)
 | **Visualization** | Plotly 6.8, Matplotlib |
 | **Dashboard** | Streamlit 1.58 |
 | **Model Serialization** | Joblib |
-| **Testing** | Custom test runner (95 assertions) |
+| **Testing** | pytest (9 test functions, 95 assertions) |
 | **Development** | Git, VS Code |
 
 ---
@@ -426,7 +412,13 @@ Then open http://localhost:8501 in your browser.
 
 ## Testing
 
-The test suite includes 95 assertions covering data files, database tables, feature engineering, forecasting outputs, inventory intelligence, anomaly detection, clustering, pipeline integration, and dashboard artifacts.
+The test suite includes 9 test functions (95 assertions) covering data files, database tables, feature engineering, forecasting outputs, inventory intelligence, anomaly detection, clustering, pipeline integration, and dashboard artifacts. Tests are pytest-compatible and also runnable via the custom runner.
+
+```bash
+pytest tests/test_pipeline.py -v
+```
+
+Or equivalently:
 
 ```bash
 python tests/test_pipeline.py
