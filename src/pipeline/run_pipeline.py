@@ -404,7 +404,7 @@ summary_lines.append(
     "\n1. **Synthetic data:** Results are based on synthetic data, not real retail operations."
 )
 summary_lines.append(
-    "2. **Zero-inflation:** Daily demand retains realistic zero-inflation from the improved generator."
+    "2. **Low zero-inflation:** The improved generator produces realistic demand with ~1.2% zero-demand observations."
 )
 summary_lines.append(
     "3. **No external features:** Weather, local events, and macroeconomic indicators are not included."

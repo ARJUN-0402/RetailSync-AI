@@ -6,11 +6,9 @@ import logging
 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard.components.ui import (
-    COLORS,
     inject_global_css,
     render_alert,
     render_data_table,
@@ -205,49 +203,43 @@ def render_model_performance_page(data: dict, models: dict) -> None:
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
     # Model Comparison
-    render_section_header("Model Comparison", subtitle="Compare different forecasting approaches")
+    render_section_header("Model Selection", subtitle="Best model selected by validation MAE")
 
-    comparison_data = pd.DataFrame(
-        {
-            "Model": ["XGBoost", "Random Forest", "Linear Regression", "Naive Baseline"],
-            "MAE": [4.09, 5.20, 6.80, 8.50],
-            "RMSE": [6.65, 8.10, 10.20, 12.00],
-            "sMAPE": [12.50, 15.80, 21.30, 28.00],
-            "R2": [0.85, 0.78, 0.65, 0.45],
-        }
-    )
+    if model_pkg and isinstance(model_pkg, dict) and "model" in model_pkg:
+        metrics = model_pkg.get("metrics", {})
+        model_name = model_pkg.get("model_name", type(model_pkg["model"]).__name__)
 
-    fig = go.Figure()
-    for metric, color in [
-        ("MAE", COLORS["primary"]),
-        ("RMSE", COLORS["warning"]),
-        ("sMAPE", COLORS["danger"]),
-    ]:
-        fig.add_trace(
-            go.Bar(
-                x=comparison_data["Model"],
-                y=comparison_data[metric],
-                name=metric,
-                marker_color=color,
-            )
+        comparison_data = pd.DataFrame(
+            {
+                "Model": [model_name],
+                "Test MAE": [round(metrics.get("mae", 0), 4)],
+                "Test RMSE": [round(metrics.get("rmse", 0), 4)],
+                "Test R²": [round(metrics.get("r2", 0), 4)],
+                "Test sMAPE (%)": [round(metrics.get("smape", 0), 2)],
+            }
         )
-    fig.update_layout(
-        title="Model Comparison: MAE, RMSE, sMAPE",
-        xaxis_title="Model",
-        yaxis_title="Error Value",
-        template="plotly_dark",
-        height=400,
-        barmode="group",
-    )
-    st.plotly_chart(fig, use_container_width=True)
 
-    # Best model highlight
-    best_model = comparison_data.loc[comparison_data["R2"].idxmax()]
-    render_alert(
-        message=f"Best model by R²: **{best_model['Model']}** (R² = {best_model['R2']:.2f}, MAE = {best_model['MAE']:.2f}, RMSE = {best_model['RMSE']:.2f}, sMAPE = {best_model['sMAPE']:.2f}%)",
-        severity="success",
-        title="Best Performer",
-    )
+        render_alert(
+            message=(
+                f"**{model_name}** was selected as the best model by validation MAE "
+                f"and achieves the following holdout test metrics:"
+            ),
+            severity="success",
+            title="Selected Model",
+        )
+
+        render_data_table(
+            comparison_data,
+            title="Selected Model Test Metrics",
+            download_label="Download Model Metrics (CSV)",
+            download_filename="model_metrics.csv",
+        )
+    else:
+        render_alert(
+            message="No model loaded. Train the demand forecaster to see model selection results.",
+            severity="info",
+            title="Model Required",
+        )
 
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 

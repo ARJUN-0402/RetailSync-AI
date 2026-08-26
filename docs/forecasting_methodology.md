@@ -50,28 +50,28 @@ This document describes the demand forecasting pipeline for RetailSync AI.
 
 ---
 
-## Why Baseline Won
+## Why Random Forest Won
 
-The high zero-inflation (~81% of target values are zero) makes this an extremely challenging forecasting problem. All models struggle because:
+The improved demand generator produces a dataset with low zero-inflation (~1.2% of daily demand values are zero) and realistic demand patterns including trend, seasonality, and promotional effects. This enables ML models to learn meaningful signals:
 
-1. **Zero-inflated target distribution:** Most product-store combinations have zero demand on most days
-2. **Low signal-to-noise ratio:** Demand appears largely random at daily granularity
-3. **Sparse sales:** The synthetic data generates sales for only a subset of products per store per day
+1. **Rich demand patterns:** The generator includes weekly/yearly seasonality, holiday effects, promotions, discounts, and price elasticity
+2. **Strong signal-to-noise ratio:** Demand follows predictable patterns modulated by calendar and commercial events
+3. **ML models excel:** Random Forest captures non-linear feature interactions better than baselines
 
-**Honest Assessment:** The baseline mean performs best because the data has very low predictability at the daily product-store level. This is a realistic finding — many real-world retail datasets exhibit similar characteristics.
+**Honest Assessment:** Random Forest achieves the lowest validation MAE among all models tested (Historical Mean, Naive, Moving Average, XGBoost). Model selection is automatic and driven by validation MAE.
 
 ---
 
-## Feature Importance (XGBoost)
+## Feature Importance (Random Forest)
 
 Top 5 most important features:
-1. `category_avg_demand` (6.12%)
-2. `store_type_avg_demand` (5.42%)
-3. `demand_expanding_std` (5.06%)
-4. `demand_expanding_mean` (4.81%)
-5. `demand_cv_28d` (4.06%)
+1. `demand_rolling_median_28d` (55.6%)
+2. `demand_expanding_mean` (3.4%)
+3. `category_avg_demand` (1.9%)
+4. `demand_expanding_std` (1.5%)
+5. `store_type_avg_demand` (1.4%)
 
-**Interpretation:** Aggregate demand patterns (category and store type) are more predictive than individual product-store history, confirming the high noise level in individual time series.
+**Interpretation:** Recent demand history (28-day rolling median) is by far the most predictive feature, followed by expanding demand statistics and aggregate demand patterns.
 
 ---
 
@@ -105,21 +105,20 @@ Top 5 most important features:
 
 ## Model Limitations
 
-1. **Zero-inflation:** The model cannot reliably predict which specific product-store combinations will have zero demand vs non-zero demand.
-2. **Granularity:** Daily product-store level forecasting is inherently noisy. Weekly or monthly aggregation would improve performance.
-3. **No external features:** Weather, holidays, promotions, and local events are not included.
-4. **Static features:** Product and store characteristics are assumed constant.
+1. **Granularity:** Daily product-store level forecasting is inherently noisy. Weekly or monthly aggregation would improve performance.
+2. **No external features:** Weather and local events are not modeled (promotion flags exist but external signals are absent).
+3. **Static features:** Product and store characteristics are assumed constant.
+4. **sMAPE interpretation:** sMAPE can be high even for good models when actual values are small; MAE and RMSE are more reliable here.
 
 ---
 
 ## Recommendations for Improvement
 
-1. **Aggregate to weekly level** to reduce zero-inflation
-2. **Use zero-inflated models** (e.g., ZeroInflatedPoisson, Hurdle models)
-3. **Add external features:** holidays, weather, promotions
-4. **Try deep learning:** Temporal Fusion Transformers, N-BEATS, or simple LSTMs
-5. **Ensemble methods:** Combine multiple models for better robustness
-6. **Probabilistic forecasting:** Predict demand distributions rather than point estimates
+1. **Aggregate to weekly level** to reduce noise
+2. **Add external features:** holidays, weather, promotions context
+3. **Try deep learning:** Temporal Fusion Transformers, N-BEATS, or simple LSTMs
+4. **Ensemble methods:** Combine multiple models for better robustness
+5. **Probabilistic forecasting:** Predict demand distributions rather than point estimates
 
 ---
 

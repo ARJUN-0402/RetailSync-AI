@@ -7,6 +7,7 @@ including KPI cards, section headers, alerts, charts, tables, and filters.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import pandas as pd
 import plotly.express as px

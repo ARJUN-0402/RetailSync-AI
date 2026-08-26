@@ -8,8 +8,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from business_metrics.config import BusinessConfig
-from business_metrics.kpi import (
+from src.business_metrics.config import BusinessConfig
+from src.business_metrics.kpi import (
     compute_executive_kpis,
     compute_forecast_accuracy,
     compute_inventory_carrying_cost,
@@ -17,7 +17,7 @@ from business_metrics.kpi import (
     compute_potential_revenue_protected,
     compute_stockout_cost,
 )
-from business_metrics.reorder import generate_reorder_recommendations
+from src.business_metrics.reorder import generate_reorder_recommendations
 from dashboard.components.ui import (
     COLORS,
     inject_global_css,

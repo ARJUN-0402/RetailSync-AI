@@ -154,11 +154,11 @@ DataFrames loaded into memory
 - **Deployment:** Easy to deploy with `streamlit run`
 - **Integration:** Works seamlessly with Pandas and Plotly
 
-### Why Baseline Mean for Forecasting?
+### Why Random Forest for Forecasting?
 
-- **Data Characteristics:** 81% zero-inflation makes ML models struggle
-- **Honest Assessment:** Baseline outperforms XGBoost and Random Forest
-- **Business Value:** Even simple forecasts provide value when combined with other intelligence
+- **Data Characteristics:** Low zero-inflation (~1.2%) with realistic demand patterns
+- **Honest Assessment:** Random Forest achieved lowest validation MAE among all models tested
+- **Business Value:** ML forecasts beat every baseline and provide actionable demand signals
 
 ### Why K-Means for Clustering?
 

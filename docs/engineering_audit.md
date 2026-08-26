@@ -293,7 +293,7 @@ Several test scripts use Unicode checkmarks (`✓`, `✗`) without `sys.stdout.r
 | K-Means segmentation | K=2 (products), K=2 (stores), K=4 (warehouses) | ✅ Verified |
 | 7-page Streamlit dashboard | 7 pages via sidebar radio | ✅ Verified |
 | 95 tests | 95 assertions via `python tests/test_pipeline.py` | ✅ Verified |
-| Zero-inflation ~81% | 81.42% of daily demand values are zero | ✅ Verified |
+| Zero-inflation ~1.2% | ~1.2% of daily demand values are zero (improved generator) | ✅ Verified |
 | Promotions ~15% | 15.29% of sales are promotional | ✅ Verified |
 | Stockouts 36.6% | 36.6% of raw inventory snapshots have QOH ≤ reorder_point | ✅ Verified |
 | Total forecasted demand 18,541 units | 18,541 (forecast_demand.sum()) | ✅ Verified |

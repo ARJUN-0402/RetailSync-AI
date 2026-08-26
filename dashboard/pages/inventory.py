@@ -230,7 +230,7 @@ def render_inventory_page(data: dict, engine) -> None:
 
     if not inv_filtered.empty:
         from src.business_metrics.reorder import generate_reorder_recommendations
-        from business_metrics.config import BusinessConfig
+        from src.business_metrics.config import BusinessConfig
 
         config = BusinessConfig()
         with st.spinner("Generating reorder recommendations..."):

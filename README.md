@@ -115,8 +115,13 @@ Implemented and verified in the codebase:
   auto-generated plain-English explanations.
 - **Business KPIs** — forecast accuracy, inventory carrying cost, stockout cost,
   overstock value, potential revenue protected, and reorder recommendations.
-- **AI Analyst** — RAG + tool-calling natural-language interface over retail data
-  (OpenAI / Anthropic / Ollama, with an offline rule-based fallback).
+- **AI Analyst** — RAG + tool-calling natural-language interface over retail data.
+  The current implementation provides **deterministic, rule-based responses** driven by
+  read-only data tools (stockout risks, overstock, reorders, anomalies, forecasts,
+  revenue, segments, KPIs, SHAP explanations). An optional **LLM provider**
+  (OpenAI / Anthropic / Ollama) can be enabled via `RETAILSYNC_AI_API_KEY` for
+  generative answers; without the key the analyst still answers questions using the
+  rule-based engine, and the rest of the dashboard is unaffected.
 - **Dashboard** — multi-page Streamlit app (Overview, Demand Forecast, Inventory,
   Anomalies, Segmentation, Warehouse, Data Explorer, Model Performance, AI Analyst, Explainability).
 - **Production hygiene** — centralized config, structured logging with secret
@@ -270,10 +275,10 @@ serialized to `models/demand_forecaster.pkl`. On the current dataset this is
 | 14-day forecast revenue | ~$16.13M |
 
 > **Honest note:** model selection is data-dependent and driven by validation MAE.
-> The dataset is heavily zero-inflated (~80%+ of daily product–store demand is zero),
-> which keeps absolute accuracy modest; the ML models still beat every baseline on
+> The current generator produces a dataset where roughly **1.2%** of daily
+> product–store demand is zero; the ML models beat every baseline on
 > MAE/RMSE/R²/sMAPE. Aggregating to weekly/monthly horizons or using zero-inflated
-> models would improve performance (see [Roadmap](#roadmap)).
+> models would improve performance further (see [Roadmap](#roadmap)).
 
 ### Top features (Random Forest importance)
 
@@ -581,8 +586,9 @@ Documented honestly:
 
 - **Synthetic data** — the dataset is generated, not real retail transactions; absolute
   numbers illustrate the pipeline rather than real business outcomes.
-- **Zero-inflation** — ~80%+ of daily product–store demand is zero, which caps
-  achievable accuracy and inflates anomaly counts.
+- **Zero-inflation** — only ~1.2% of daily product–store demand is zero, thanks to
+  the improved demand generator; the dataset retains realistic demand patterns with
+  trend, seasonality, and promotional effects.
 - **Granularity** — daily product–store forecasting is noisy; weekly/monthly aggregation
   would improve signal.
 - **No external features** — weather, holidays, promotions context, and local events are

@@ -48,15 +48,15 @@ This document captures key design decisions made during the development of Retai
 - Validation: 2025-01-01 to 2025-06-09 (80,000 rows)
 - Test: 2025-06-10 to 2025-08-09 (30,500 rows)
 
-## 4. Baseline Mean as Best Forecasting Model
+## 4. Random Forest as Best Forecasting Model
 
-**Decision:** Use historical mean as the production forecasting model.
+**Decision:** Use Random Forest as the production forecasting model.
 
 **Rationale:**
-- High zero-inflation (81%) makes ML models struggle
-- Baseline Mean achieved lowest MAE (4.09) on validation set
-- Honest assessment of model performance
-- Avoids overfitting to noise
+- Low zero-inflation (~1.2%) with realistic demand patterns enables ML models to learn
+- Random Forest achieved lowest validation MAE among all models tested
+- Model selection is automatic and metric-driven (validation MAE)
+- Avoids overfitting through ensemble averaging
 
 **Trade-offs:**
 - Pro: Simple, interpretable, no overfitting

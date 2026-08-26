@@ -156,11 +156,11 @@ retailsync-ai/
 ## Portfolio Talking Points
 
 - "End-to-end ML pipeline from synthetic data generation to deployed dashboard"
-- "95/95 tests passing with comprehensive validation"
-- "Honest assessment: baseline model outperforms XGBoost due to 81% zero-inflation"
-- "74 features engineered with time-safe validation to prevent data leakage"
-- "Ensemble anomaly detection with 31,619 flagged records"
-- "7-page interactive dashboard with all KPIs from live data"
+- "178 tests passing with comprehensive validation"
+- "Honest assessment: automatic model selection picks the best model by validation MAE"
+- "68 features engineered with time-safe validation to prevent data leakage"
+- "Ensemble anomaly detection with Z-score + IQR + Isolation Forest"
+- "10-page interactive dashboard with all KPIs from live data"
 
 ## Next Steps for Production
 
