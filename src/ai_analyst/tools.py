@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
-import sys
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -18,14 +18,9 @@ from .exceptions import ToolExecutionError
 
 logger = logging.getLogger(__name__)
 
-_project_root = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-
-DATABASE_PATH = os.path.join(_project_root, "database", "retailsync.db")
-PROCESSED_DIR = os.path.join(_project_root, "data", "processed")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DATABASE_PATH = os.path.join(_PROJECT_ROOT, "database", "retailsync.db")
+PROCESSED_DIR = os.path.join(_PROJECT_ROOT, "data", "processed")
 
 
 def _get_engine():
@@ -485,7 +480,7 @@ def get_executive_kpis() -> dict[str, Any]:
 
         features = _load_csv("features_daily.csv")
         model_pkg = None
-        model_path = os.path.join(_project_root, "models", "demand_forecaster.pkl")
+        model_path = os.path.join(_PROJECT_ROOT, "models", "demand_forecaster.pkl")
         if os.path.exists(model_path):
             try:
                 import joblib

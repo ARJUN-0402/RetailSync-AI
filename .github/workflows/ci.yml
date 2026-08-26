@@ -42,19 +42,19 @@ jobs:
         pip install -r requirements.txt
     - name: Generate pipeline artifacts
       run: |
-        python src/data/generate_dataset.py
-        python src/data/ingest.py
-        python src/database/init_db.py
-        python src/features/feature_engineering.py
-        python src/forecasting/demand_forecaster.py
-        python src/forecasting/forecast_pipeline.py
-        python src/inventory/inventory_intelligence.py
-        python src/inventory/load_alerts.py
-        python src/anomaly/anomaly_detection.py
-        python src/clustering/segmentation.py
-        python src/clustering/warehouse_optimization.py
+        python -m src.data.generate_dataset
+        python -m src.data.ingest
+        python -m src.database.init_db
+        python -m src.features.feature_engineering
+        python -m src.forecasting.demand_forecaster
+        python -m src.forecasting.forecast_pipeline
+        python -m src.inventory.inventory_intelligence
+        python -m src.inventory.load_alerts
+        python -m src.anomaly.anomaly_detection
+        python -m src.clustering.segmentation
+        python -m src.clustering.warehouse_optimization
     - name: Run pytest
-      run: pytest tests/ -v --tb=short
+      run: python -m pytest tests/ -v --tb=short
     - name: Run dashboard integration validation
       run: |
         python tests/validate_dashboard_integration.py

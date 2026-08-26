@@ -6,14 +6,10 @@ Run with:
 """
 
 import os
-import sys
 
 import joblib
 import numpy as np
 import pandas as pd
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, PROJECT_ROOT)
 
 from sklearn.linear_model import LinearRegression
 from xgboost import XGBRegressor
@@ -30,6 +26,7 @@ from src.explainability import (
 )
 from src.explainability.exceptions import ModelLoadError
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 PROCESSED_DIR = os.path.join(PROJECT_ROOT, "data", "processed")
 

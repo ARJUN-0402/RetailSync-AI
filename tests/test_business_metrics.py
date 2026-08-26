@@ -6,15 +6,9 @@ Run with:
 
 from __future__ import annotations
 
-import os
-import sys
-
 import numpy as np
 import pandas as pd
 import pytest
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, PROJECT_ROOT)
 
 from src.business_metrics.config import BusinessConfig
 from src.business_metrics.kpi import (

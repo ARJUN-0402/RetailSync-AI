@@ -24,7 +24,6 @@ can decide how to degrade gracefully (e.g. hide a dashboard panel).
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,12 +45,6 @@ try:
 except ImportError:  # pragma: no cover - environment without shap
     shap = None  # type: ignore
     _SHAP_AVAILABLE = False
-
-_PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
 
 
 # ---------------------------------------------------------------------------

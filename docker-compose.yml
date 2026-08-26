@@ -23,7 +23,7 @@ services:
       - LOG_LEVEL=INFO
       - RETAILSYNC_AI_OFFLINE_MODE=true
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, 'src'); from health import get_health_status; import json; status = get_health_status(); print(json.dumps(status)); sys.exit(0 if status['status'] in ('healthy', 'degraded') else 1)"]
+      test: ["CMD", "python", "-c", "from src.health import get_health_status; raise SystemExit(0 if get_health_status()['status'] in ('healthy', 'degraded') else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -1,11 +1,6 @@
 """RetailSync AI - AI-Powered Retail Demand Forecasting & Supply Chain Intelligence Platform."""
 
 import os
-import sys
-
-_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, _project_root)
-sys.path.insert(0, os.path.join(_project_root, "src"))
 
 import joblib
 import pandas as pd
@@ -31,6 +26,8 @@ from dashboard.pages.warehouse import render_warehouse_page
 from src.config import settings
 from src.health import get_health_status
 from src.utils.logging import setup_logging
+
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 logger = setup_logging(__name__)
 

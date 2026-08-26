@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import sys
-
-
-PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-sys.path.insert(0, PROJECT_ROOT)
-
 from src.config import Settings, settings
 from src.health import check_configuration, check_data_files, check_database, check_models, get_health_status
 

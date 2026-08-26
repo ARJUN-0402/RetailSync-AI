@@ -50,16 +50,7 @@ USER appuser
 EXPOSE 8501
 
 # Health check - verifies app can start and critical components exist
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "
-import sys
-sys.path.insert(0, 'src');
-from health import get_health_status;
-import json;
-status = get_health_status();
-print(json.dumps(status));
-sys.exit(0 if status['status'] in ('healthy', 'degraded') else 1)
-" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 CMD python -c "from src.health import get_health_status; raise SystemExit(0 if get_health_status()['status'] in ('healthy', 'degraded') else 1)"
 
 # Run Streamlit dashboard
 CMD ["streamlit", "run", "dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]

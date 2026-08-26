@@ -1,6 +1,6 @@
 [lint]
 select = ["E", "F"]
-ignore = ["E501", "E402"]
+ignore = ["E501"]
 
 [format]
 indent-style = "space"
