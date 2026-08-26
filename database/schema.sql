@@ -55,8 +55,9 @@ CREATE TABLE IF NOT EXISTS sales (
     store_id TEXT NOT NULL,
     quantity_sold INTEGER NOT NULL,
     unit_price REAL NOT NULL,
-    revenue REAL NOT NULL,
+    discount_pct REAL NOT NULL,
     promotion INTEGER NOT NULL,
+    revenue REAL NOT NULL,
     FOREIGN KEY (product_id) REFERENCES products(product_id),
     FOREIGN KEY (store_id) REFERENCES stores(store_id)
 );

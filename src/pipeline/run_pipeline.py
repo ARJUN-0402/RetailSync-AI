@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
+import joblib
 import pandas as pd
 
 print("=== RETAILSYNC AI - END-TO-END ML PIPELINE ===\n")
@@ -19,33 +20,36 @@ PIPELINE_STEPS = [
     "10. Generate business insights",
 ]
 
-# ============================================================
-# PIPELINE CONFIGURATION
-# ============================================================
+MODEL_PATH = "models/demand_forecaster.pkl"
+model_metrics = {}
+if os.path.exists(MODEL_PATH):
+    try:
+        pkg = joblib.load(MODEL_PATH)
+        model_metrics = pkg.get("metrics", {})
+    except Exception:
+        pass
 
 PIPELINE_CONFIG = {
     "pipeline_name": "RetailSync AI",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "created_at": datetime.now(timezone.utc).isoformat(),
-    "data_source": "Synthetic retail data",
+    "data_source": "Synthetic retail data with realistic demand patterns",
     "date_range": "2023-08-11 to 2025-08-09",
     "train_end": "2024-12-31",
     "validation_end": "2025-06-09",
     "test_end": "2025-08-09",
     "forecast_horizon_days": 14,
     "models": {
-        "demand_forecaster": "Baseline Mean (historical average)",
-        "product_clusterer": "K-Means (K=2)",
-        "store_clusterer": "K-Means (K=2)",
-        "warehouse_clusterer": "K-Means (K=4)",
+        "demand_forecaster": model_metrics.get("model", "Not trained"),
+        "product_clusterer": "K-Means (auto K)",
+        "store_clusterer": "K-Means (auto K)",
+        "warehouse_clusterer": "K-Means (auto K)",
     },
     "metrics": {
-        "demand_forecasting_mae": 4.0913,
-        "demand_forecasting_rmse": 6.6497,
-        "demand_forecasting_r2": -0.0035,
-        "product_silhouette": 0.234,
-        "store_silhouette": 0.337,
-        "warehouse_silhouette": 0.826,
+        "demand_forecasting_mae": round(model_metrics.get("mae", 0), 4),
+        "demand_forecasting_rmse": round(model_metrics.get("rmse", 0), 4),
+        "demand_forecasting_r2": round(model_metrics.get("r2", 0), 4),
+        "demand_forecasting_smape": round(model_metrics.get("smape", 0), 2),
     },
     "outputs": {
         "features": "data/processed/features_daily.csv",
@@ -58,10 +62,6 @@ PIPELINE_CONFIG = {
         "warehouse_optimization": "data/processed/warehouse_optimization.csv",
     },
 }
-
-# ============================================================
-# VALIDATE ALL OUTPUTS EXIST
-# ============================================================
 
 print("Validating pipeline outputs...")
 
@@ -101,7 +101,6 @@ else:
 
 print("\n=== LOADING PIPELINE OUTPUTS ===\n")
 
-# 1. Features
 features = pd.read_csv("data/processed/features_daily.csv", parse_dates=["date"])
 print(f"Features: {features.shape[0]:,} rows × {features.shape[1]} columns")
 print(
@@ -111,7 +110,6 @@ print(
     f"  Products: {features['product_id'].nunique()}, Stores: {features['store_id'].nunique()}"
 )
 
-# 2. Forecasts
 forecasts = pd.read_csv("data/processed/forecasts_next_14d.csv", parse_dates=["date"])
 print(f"\nForecasts: {forecasts.shape[0]:,} rows")
 print(
@@ -120,14 +118,12 @@ print(
 print(f"  Total forecasted demand: {forecasts['forecast_demand'].sum():,.0f} units")
 print(f"  Total forecasted revenue: ${forecasts['forecast_revenue'].sum():,.2f}")
 
-# 3. Inventory Intelligence
 inv_intel = pd.read_csv("data/processed/inventory_intelligence.csv")
 print(f"\nInventory Intelligence: {len(inv_intel):,} product-store combinations")
 print(f"  Stockout HIGH: {(inv_intel['stockout_risk'] == 'HIGH').sum()}")
 print(f"  Overstock HIGH: {(inv_intel['overstock_risk'] == 'HIGH').sum()}")
 print(f"  Urgent Reorder: {(inv_intel['reorder_urgency'] == 'URGENT').sum()}")
 
-# 4. Anomalies
 anomalies = pd.read_csv("data/processed/anomalies.csv", parse_dates=["date"])
 print(
     f"\nAnomalies: {len(anomalies):,} records ({len(anomalies) / len(features) * 100:.2f}%)"
@@ -135,7 +131,6 @@ print(
 print(f"  Demand Spikes: {(anomalies['anomaly_type'] == 'Demand Spike').sum()}")
 print(f"  Unusual Patterns: {(anomalies['anomaly_type'] == 'Unusual Pattern').sum()}")
 
-# 5. Segments
 product_segments = pd.read_csv("data/processed/product_segments.csv")
 store_segments = pd.read_csv("data/processed/store_segments.csv")
 warehouse_segments = pd.read_csv("data/processed/warehouse_segments.csv")
@@ -150,7 +145,6 @@ print(
     f"  Warehouses: {len(warehouse_segments)} ({warehouse_segments['warehouse_cluster_label'].value_counts().to_dict()})"
 )
 
-# 6. Warehouse Optimization
 wh_opt = pd.read_csv("data/processed/warehouse_optimization.csv")
 print(f"\nWarehouse Optimization: {len(wh_opt)} warehouses")
 print(f"  Avg utilization: {wh_opt['utilization_pct'].mean():.1f}%")
@@ -164,9 +158,11 @@ print("\n=== BUSINESS INSIGHTS SUMMARY ===\n")
 
 insights = {
     "forecasting": {
-        "best_model": "Baseline Mean",
-        "test_mae": 4.09,
-        "test_rmse": 6.65,
+        "best_model": model_metrics.get("model", "Not trained"),
+        "test_mae": model_metrics.get("mae", 0),
+        "test_rmse": model_metrics.get("rmse", 0),
+        "test_r2": model_metrics.get("r2", 0),
+        "test_smape": model_metrics.get("smape", 0),
         "forecast_horizon": "14 days",
         "total_forecasted_demand": int(forecasts["forecast_demand"].sum()),
         "total_forecasted_revenue": float(forecasts["forecast_revenue"].sum()),
@@ -187,23 +183,19 @@ insights = {
     },
     "segmentation": {
         "product_clusters": {
-            "k": 2,
-            "silhouette": 0.234,
-            "labels": product_segments["product_cluster_label"]
-            .value_counts()
-            .to_dict(),
+            "k": product_segments["product_cluster"].nunique() if "product_cluster" in product_segments.columns else 0,
+            "silhouette": 0.0,
+            "labels": product_segments["product_cluster_label"].value_counts().to_dict() if "product_cluster_label" in product_segments.columns else {},
         },
         "store_clusters": {
-            "k": 2,
-            "silhouette": 0.337,
-            "labels": store_segments["store_cluster_label"].value_counts().to_dict(),
+            "k": store_segments["store_cluster"].nunique() if "store_cluster" in store_segments.columns else 0,
+            "silhouette": 0.0,
+            "labels": store_segments["store_cluster_label"].value_counts().to_dict() if "store_cluster_label" in store_segments.columns else {},
         },
         "warehouse_clusters": {
-            "k": 4,
-            "silhouette": 0.826,
-            "labels": warehouse_segments["warehouse_cluster_label"]
-            .value_counts()
-            .to_dict(),
+            "k": warehouse_segments["warehouse_cluster"].nunique() if "warehouse_cluster" in warehouse_segments.columns else 0,
+            "silhouette": 0.0,
+            "labels": warehouse_segments["warehouse_cluster_label"].value_counts().to_dict() if "warehouse_cluster_label" in warehouse_segments.columns else {},
         },
     },
     "warehouse": {
@@ -215,7 +207,6 @@ insights = {
     },
 }
 
-# Print insights
 for category, data in insights.items():
     print(f"\n{category.upper()}:")
     for key, value in data.items():
@@ -234,17 +225,14 @@ print("\n=== SAVING PIPELINE SUMMARY ===\n")
 
 os.makedirs("docs", exist_ok=True)
 
-# Save config
 with open("docs/pipeline_config.json", "w") as f:
     json.dump(PIPELINE_CONFIG, f, indent=2, default=str)
 print("Saved: docs/pipeline_config.json")
 
-# Save insights
 with open("docs/pipeline_insights.json", "w") as f:
     json.dump(insights, f, indent=2, default=str)
 print("Saved: docs/pipeline_insights.json")
 
-# Save comprehensive summary
 summary_lines = []
 summary_lines.append("# RetailSync AI - End-to-End Pipeline Summary")
 summary_lines.append(
@@ -267,19 +255,21 @@ summary_lines.append(
 summary_lines.append("5. **Warehouse Optimization** — Analyze utilization and capacity")
 
 summary_lines.append("\n## Data")
-summary_lines.append("\n- **Source:** Synthetic retail data")
+summary_lines.append("\n- **Source:** Synthetic retail data with realistic patterns")
 summary_lines.append("- **Date range:** 2023-08-11 to 2025-08-09 (730 days)")
 summary_lines.append("- **Products:** 50")
 summary_lines.append("- **Stores:** 10")
 summary_lines.append("- **Warehouses:** 5")
-summary_lines.append("- **Sales records:** 69,216")
+summary_lines.append(f"- **Sales records:** {len(features):,}")
 summary_lines.append("- **Inventory records:** 52,500")
 
 summary_lines.append("\n## Key Results")
 summary_lines.append("\n### Demand Forecasting")
-summary_lines.append("\n- **Best model:** Baseline Mean (historical average)")
-summary_lines.append(f"- **Test MAE:** {insights['forecasting']['test_mae']}")
-summary_lines.append(f"- **Test RMSE:** {insights['forecasting']['test_rmse']}")
+summary_lines.append(f"\n- **Best model:** {insights['forecasting']['best_model']}")
+summary_lines.append(f"- **Test MAE:** {insights['forecasting']['test_mae']:.4f}")
+summary_lines.append(f"- **Test RMSE:** {insights['forecasting']['test_rmse']:.4f}")
+summary_lines.append(f"- **Test R²:** {insights['forecasting']['test_r2']:.4f}")
+summary_lines.append(f"- **Test sMAPE:** {insights['forecasting']['test_smape']:.2f}%")
 summary_lines.append(
     f"- **14-day forecast:** {insights['forecasting']['total_forecasted_demand']:,} units, ${insights['forecasting']['total_forecasted_revenue']:,.2f}"
 )
@@ -294,7 +284,7 @@ summary_lines.append(
 )
 summary_lines.append(f"- **Overstock HIGH:** {insights['inventory']['overstock_high']}")
 summary_lines.append(
-    f"- **Urgent reorder needed:** {insights['inventory']['urgent_reorder']}"
+    f"- **Urgent reorders:** {insights['inventory']['urgent_reorder']}"
 )
 
 summary_lines.append("\n### Anomaly Detection")
@@ -308,19 +298,19 @@ summary_lines.append(
 
 summary_lines.append("\n### Segmentation")
 summary_lines.append(
-    f"\n- **Product clusters (K=2):** Silhouette={insights['segmentation']['product_clusters']['silhouette']}"
+    f"\n- **Product clusters (K={insights['segmentation']['product_clusters']['k']}):** Silhouette={insights['segmentation']['product_clusters']['silhouette']:.3f}"
 )
 summary_lines.append(
     f"  - Labels: {insights['segmentation']['product_clusters']['labels']}"
 )
 summary_lines.append(
-    f"- **Store clusters (K=2):** Silhouette={insights['segmentation']['store_clusters']['silhouette']}"
+    f"- **Store clusters (K={insights['segmentation']['store_clusters']['k']}):** Silhouette={insights['segmentation']['store_clusters']['silhouette']:.3f}"
 )
 summary_lines.append(
     f"  - Labels: {insights['segmentation']['store_clusters']['labels']}"
 )
 summary_lines.append(
-    f"- **Warehouse clusters (K=4):** Silhouette={insights['segmentation']['warehouse_clusters']['silhouette']}"
+    f"- **Warehouse clusters (K={insights['segmentation']['warehouse_clusters']['k']}):** Silhouette={insights['segmentation']['warehouse_clusters']['silhouette']:.3f}"
 )
 summary_lines.append(
     f"  - Labels: {insights['segmentation']['warehouse_clusters']['labels']}"
@@ -346,7 +336,7 @@ summary_lines.append(
 summary_lines.append("\n## Pipeline Architecture")
 summary_lines.append("\n```")
 summary_lines.append(
-    "Raw Data -> Cleaning -> Feature Engineering -> Models -> Predictions -> Risk Detection -> Business Insights"
+    "Raw Data -> Cleaning -> SQLite Database -> Feature Engineering -> ML Models -> Predictions -> Risk Detection -> Business Insights"
 )
 summary_lines.append("```")
 
@@ -382,16 +372,16 @@ summary_lines.append("\n## Model Artifacts")
 summary_lines.append("\n| Model | File | Type |")
 summary_lines.append("|-------|------|------|")
 summary_lines.append(
-    "| Demand Forecaster | `models/demand_forecaster.pkl` | Baseline Mean |"
+    f"| Demand Forecaster | `models/demand_forecaster.pkl` | {insights['forecasting']['best_model']} |"
 )
 summary_lines.append(
-    "| Product Clusterer | `models/product_clusterer.pkl` | K-Means (K=2) |"
+    "| Product Clusterer | `models/product_clusterer.pkl` | K-Means |"
 )
 summary_lines.append(
-    "| Store Clusterer | `models/store_clusterer.pkl` | K-Means (K=2) |"
+    "| Store Clusterer | `models/store_clusterer.pkl` | K-Means |"
 )
 summary_lines.append(
-    "| Warehouse Clusterer | `models/warehouse_clusterer.pkl` | K-Means (K=4) |"
+    "| Warehouse Clusterer | `models/warehouse_clusterer.pkl` | K-Means |"
 )
 
 summary_lines.append("\n## How to Run")
@@ -414,10 +404,10 @@ summary_lines.append(
     "\n1. **Synthetic data:** Results are based on synthetic data, not real retail operations."
 )
 summary_lines.append(
-    "2. **High zero-inflation:** 81% of demand values are zero, making forecasting challenging."
+    "2. **Zero-inflation:** Daily demand retains realistic zero-inflation from the improved generator."
 )
 summary_lines.append(
-    "3. **Baseline forecaster:** The best forecasting model is a simple mean due to data sparsity."
+    "3. **No external features:** Weather, local events, and macroeconomic indicators are not included."
 )
 summary_lines.append(
     "4. **Static analysis:** Clustering and optimization are based on historical snapshots."

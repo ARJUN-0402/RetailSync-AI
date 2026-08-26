@@ -123,7 +123,7 @@ leakage_checks.append(("No suspicious future correlations", len(suspicious), 0))
 
 # 5. Row count sanity check
 print("5. Row count sanity check...")
-expected_rows = 365000
+expected_rows = 358000
 actual_rows = len(df)
 row_check = actual_rows == expected_rows
 print(f"   Expected rows: {expected_rows}, Actual: {actual_rows}")

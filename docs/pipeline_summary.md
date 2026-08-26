@@ -1,6 +1,6 @@
 # RetailSync AI - End-to-End Pipeline Summary
 
-**Generated:** 2026-08-10 06:40:19
+**Generated:** 2026-08-26 15:10:53
 
 ## Pipeline Overview
 
@@ -14,58 +14,60 @@ RetailSync AI is an end-to-end retail supply chain analytics platform that combi
 
 ## Data
 
-- **Source:** Synthetic retail data
+- **Source:** Synthetic retail data with realistic patterns
 - **Date range:** 2023-08-11 to 2025-08-09 (730 days)
 - **Products:** 50
 - **Stores:** 10
 - **Warehouses:** 5
-- **Sales records:** 69,216
+- **Sales records:** 365,000
 - **Inventory records:** 52,500
 
 ## Key Results
 
 ### Demand Forecasting
 
-- **Best model:** Baseline Mean (historical average)
-- **Test MAE:** 4.09
-- **Test RMSE:** 6.65
-- **14-day forecast:** 15,819 units, $4,089,393.00
+- **Best model:** RandomForest (91.1s) (Test Set)
+- **Test MAE:** 4.6507
+- **Test RMSE:** 8.2882
+- **Test R²:** 0.2227
+- **Test sMAPE:** 46.84%
+- **14-day forecast:** 69,411 units, $16,125,040.53
 
 ### Inventory Intelligence
 
 - **Product-store combinations analyzed:** 500
-- **Stockout HIGH:** 16
-- **Stockout MEDIUM:** 169
-- **Overstock HIGH:** 110
-- **Urgent reorder needed:** 185
+- **Stockout HIGH:** 10
+- **Stockout MEDIUM:** 21
+- **Overstock HIGH:** 58
+- **Urgent reorders:** 31
 
 ### Anomaly Detection
 
-- **Total anomalies:** 31,619 (8.66%)
-- **Demand spikes:** 28,292
-- **Unusual patterns:** 3,327
+- **Total anomalies:** 13,522 (3.7%)
+- **Demand spikes:** 12,433
+- **Unusual patterns:** 1,089
 
 ### Segmentation
 
-- **Product clusters (K=2):** Silhouette=0.234
-  - Labels: {'Slow-Moving': 27, 'High-Volume / Stable': 9, 'Low-Volume / Volatile': 7, 'High-Volume / Volatile': 4, 'Medium-Volume / Moderate': 3}
-- **Store clusters (K=2):** Silhouette=0.337
-  - Labels: {'High-Performance': 3, 'Low-Performance': 3, 'Stable Performance': 2, 'High-Variability': 2}
-- **Warehouse clusters (K=4):** Silhouette=0.826
-  - Labels: {'Balanced': 2, 'Overstocked': 1, 'Underutilized': 1, 'High-Utilization': 1}
+- **Product clusters (K=2):** Silhouette=0.000
+  - Labels: {'Medium-Volume / Moderate': 29, 'High-Volume / Stable': 11, 'Low-Volume / Volatile': 8, 'High-Volume / Volatile': 2}
+- **Store clusters (K=3):** Silhouette=0.000
+  - Labels: {'Low-Performance': 3, 'High-Performance': 3, 'Stable Performance': 2, 'High-Variability': 2}
+- **Warehouse clusters (K=3):** Silhouette=0.000
+  - Labels: {'Overstocked': 2, 'Balanced': 2, 'High-Utilization': 1}
 
 ### Warehouse Optimization
 
 - **Warehouses analyzed:** 5
-- **Total capacity:** 48,906 m³
-- **Average utilization:** 14.5%
-- **High utilization (>80%):** 0
-- **Low utilization (<50%):** 5
+- **Total capacity:** 49,835 m³
+- **Average utilization:** 55.4%
+- **High utilization (>80%):** 1
+- **Low utilization (<50%):** 2
 
 ## Pipeline Architecture
 
 ```
-Raw Data -> Cleaning -> Feature Engineering -> Models -> Predictions -> Risk Detection -> Business Insights
+Raw Data -> Cleaning -> SQLite Database -> Feature Engineering -> ML Models -> Predictions -> Risk Detection -> Business Insights
 ```
 
 ## Files and Outputs
@@ -75,7 +77,7 @@ Raw Data -> Cleaning -> Feature Engineering -> Models -> Predictions -> Risk Det
 | Features | `data/processed/features_daily.csv` | 365,000 |
 | Forecasts | `data/processed/forecasts_next_14d.csv` | 7,000 |
 | Inventory Alerts | `data/processed/inventory_intelligence.csv` | 500 |
-| Anomalies | `data/processed/anomalies.csv` | 31,619 |
+| Anomalies | `data/processed/anomalies.csv` | 13,522 |
 | Product Segments | `data/processed/product_segments.csv` | 50 |
 | Store Segments | `data/processed/store_segments.csv` | 10 |
 | Warehouse Segments | `data/processed/warehouse_segments.csv` | 5 |
@@ -85,10 +87,10 @@ Raw Data -> Cleaning -> Feature Engineering -> Models -> Predictions -> Risk Det
 
 | Model | File | Type |
 |-------|------|------|
-| Demand Forecaster | `models/demand_forecaster.pkl` | Baseline Mean |
-| Product Clusterer | `models/product_clusterer.pkl` | K-Means (K=2) |
-| Store Clusterer | `models/store_clusterer.pkl` | K-Means (K=2) |
-| Warehouse Clusterer | `models/warehouse_clusterer.pkl` | K-Means (K=4) |
+| Demand Forecaster | `models/demand_forecaster.pkl` | RandomForest (91.1s) (Test Set) |
+| Product Clusterer | `models/product_clusterer.pkl` | K-Means |
+| Store Clusterer | `models/store_clusterer.pkl` | K-Means |
+| Warehouse Clusterer | `models/warehouse_clusterer.pkl` | K-Means |
 
 ## How to Run
 
@@ -109,8 +111,8 @@ python src/clustering/warehouse_optimization.py
 ## Limitations
 
 1. **Synthetic data:** Results are based on synthetic data, not real retail operations.
-2. **High zero-inflation:** 81% of demand values are zero, making forecasting challenging.
-3. **Baseline forecaster:** The best forecasting model is a simple mean due to data sparsity.
+2. **Zero-inflation:** Daily demand retains realistic zero-inflation from the improved generator.
+3. **No external features:** Weather, local events, and macroeconomic indicators are not included.
 4. **Static analysis:** Clustering and optimization are based on historical snapshots.
 
 ## Next Steps

@@ -37,6 +37,8 @@ REQUIRED_SCHEMA = {
         "product_id",
         "store_id",
         "quantity_sold",
+        "unit_price",
+        "discount_pct",
         "revenue",
         "promotion",
     ],
