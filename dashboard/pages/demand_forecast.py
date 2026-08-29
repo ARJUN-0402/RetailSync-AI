@@ -10,7 +10,6 @@ import streamlit as st
 
 from dashboard.components.ui import (
     COLORS,
-    inject_global_css,
     render_empty_state,
     render_kpi_row,
     render_section_header,
@@ -22,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 def render_demand_forecast_page(data: dict, models: dict) -> None:
     """Render the demand forecast page."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Demand Forecast</div>

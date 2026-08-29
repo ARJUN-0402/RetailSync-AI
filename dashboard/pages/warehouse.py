@@ -8,7 +8,6 @@ import plotly.express as px
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_data_table,
     render_empty_state,
     render_kpi_row,
@@ -20,8 +19,6 @@ logger = logging.getLogger(__name__)
 
 def render_warehouse_page(data: dict) -> None:
     """Render the warehouse intelligence page."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Warehouse Intelligence</div>

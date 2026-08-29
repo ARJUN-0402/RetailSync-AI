@@ -10,14 +10,12 @@ import streamlit as st
 
 from dashboard.components.ui import (
     COLORS,
-    inject_global_css,
     render_alert,
     render_data_table,
     render_empty_state,
     render_kpi_row,
     render_pie_chart,
     render_section_header,
-    render_filter_sidebar,
     apply_filters,
 )
 
@@ -26,8 +24,6 @@ logger = logging.getLogger(__name__)
 
 def render_inventory_page(data: dict, engine) -> None:
     """Render the inventory intelligence page with integrated alert center."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Inventory Intelligence</div>
@@ -50,19 +46,24 @@ def render_inventory_page(data: dict, engine) -> None:
         )
         return
 
-    # Filters
     product_options = sorted(products["product_id"].unique().tolist()) if products is not None and not products.empty else []
     category_options = sorted(products["category"].unique().tolist()) if products is not None and "category" in products.columns else []
     store_options = sorted(stores["store_id"].unique().tolist()) if stores is not None and not stores.empty else []
     warehouse_options = sorted(inv_intel["warehouse_id"].dropna().unique().tolist()) if "warehouse_id" in inv_intel.columns else []
 
-    filters = render_filter_sidebar(
-        title="Inventory Filters",
-        product_options=product_options,
-        category_options=category_options,
-        store_options=store_options,
-        warehouse_options=warehouse_options,
-    )
+    with st.sidebar.form("inventory_filters"):
+        selected_product = st.selectbox("Product", ["All"] + product_options, key="inv_product")
+        selected_category = st.selectbox("Category", ["All"] + category_options, key="inv_category")
+        selected_store = st.selectbox("Store", ["All"] + store_options, key="inv_store")
+        selected_warehouse = st.selectbox("Warehouse", ["All"] + warehouse_options, key="inv_warehouse")
+        st.form_submit_button("Apply Filters", use_container_width=True)
+
+    filters = {
+        "product": selected_product if selected_product != "All" else None,
+        "category": selected_category if selected_category != "All" else None,
+        "store": selected_store if selected_store != "All" else None,
+        "warehouse": selected_warehouse if selected_warehouse != "All" else None,
+    }
 
     inv_filtered = apply_filters(inv_intel, filters)
 

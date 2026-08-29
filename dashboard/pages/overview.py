@@ -8,7 +8,6 @@ import streamlit as st
 
 from dashboard.components.ui import (
     COLORS,
-    inject_global_css,
     render_alert,
     render_data_table,
     render_empty_state,
@@ -24,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 def render_overview_page(data: dict, models: dict, engine) -> None:
     """Render the executive overview dashboard."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">RetailSync AI</div>

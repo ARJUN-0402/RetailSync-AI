@@ -144,23 +144,21 @@ def generate_reorder_recommendations(
         df["demand_std"] = 0.0
     df["demand_std"] = df["demand_std"].fillna(0).clip(lower=0)
 
-    # Compute safety stock
-    df["safety_stock"] = df.apply(
-        lambda row: _compute_safety_stock(
-            row["avg_daily_demand"],
-            row["demand_std"],
-            int(row["lead_time_days"]),
-            config.safety_stock_z_score,
-        ),
-        axis=1,
+    # Compute safety stock vectorized
+    if "demand_std" not in df.columns:
+        df["demand_std"] = 0.0
+    df["demand_std"] = df["demand_std"].fillna(0).clip(lower=0)
+    df["safety_stock"] = np.where(
+        (df["demand_std"] > 0) & (df["lead_time_days"] > 0),
+        config.safety_stock_z_score * df["demand_std"] * np.sqrt(df["lead_time_days"]),
+        0.0,
     )
 
-    # Compute lead-time demand
-    df["lead_time_demand"] = df.apply(
-        lambda row: _compute_lead_time_demand(
-            row["avg_daily_demand"], int(row["lead_time_days"])
-        ),
-        axis=1,
+    # Compute lead-time demand vectorized
+    df["lead_time_demand"] = np.where(
+        (df["avg_daily_demand"] > 0) & (df["lead_time_days"] > 0),
+        df["avg_daily_demand"] * df["lead_time_days"],
+        0.0,
     )
 
     # Reorder point = lead_time_demand + safety_stock
@@ -171,60 +169,54 @@ def generate_reorder_recommendations(
         df["reorder_point_computed"] - df["quantity_on_hand"]
     ).clip(lower=0)
 
-    # Expected coverage days
-    df["expected_coverage_days"] = df.apply(
-        lambda row: safe_div(
-            row["quantity_on_hand"], row["avg_daily_demand"], default=999.0
-        ),
-        axis=1,
+    # Expected coverage days vectorized
+    df["expected_coverage_days"] = np.where(
+        df["avg_daily_demand"] > 0,
+        df["quantity_on_hand"] / df["avg_daily_demand"],
+        999.0,
     )
     df["expected_coverage_days"] = df["expected_coverage_days"].fillna(999.0)
 
-    # Reorder urgency
-    def _urgency(row):
-        coverage = safe_num(row["expected_coverage_days"], default=999.0)
-        if row["quantity_on_hand"] <= 0:
-            return "CRITICAL"
-        if coverage <= 3:
-            return "URGENT"
-        if coverage <= 7:
-            return "SOON"
-        if coverage <= 14:
-            return "MONITOR"
-        return "NONE"
+    # Reorder urgency vectorized
+    coverage = df["expected_coverage_days"].fillna(999.0)
+    urgency_conditions = [
+        df["quantity_on_hand"] <= 0,
+        coverage <= 3,
+        coverage <= 7,
+        coverage <= 14,
+    ]
+    urgency_choices = ["CRITICAL", "URGENT", "SOON", "MONITOR"]
+    df["reorder_urgency_computed"] = np.select(urgency_conditions, urgency_choices, default="NONE")
 
-    df["reorder_urgency_computed"] = df.apply(_urgency, axis=1)
+    # Reasoning vectorized
+    reasons = []
+    if df["quantity_on_hand"].le(0).any():
+        reasons.append(np.where(df["quantity_on_hand"] <= 0, "Out of stock", ""))
+    if coverage.le(3).any():
+        reasons.append(np.where(coverage <= 3, "Coverage below 3 days", ""))
+    if coverage.le(7).any():
+        reasons.append(np.where(coverage <= 7, "Coverage below 7 days", ""))
+    if (df["safety_stock"] > df["quantity_on_hand"]).any():
+        reasons.append(np.where(df["safety_stock"] > df["quantity_on_hand"], "Below safety stock", ""))
+    if (df["lead_time_demand"] > df["quantity_on_hand"]).any():
+        reasons.append(np.where(df["lead_time_demand"] > df["quantity_on_hand"], "Insufficient for lead time", ""))
 
-    # Reasoning
-    def _reasoning(row):
-        reasons = []
-        if row["quantity_on_hand"] <= 0:
-            reasons.append("Out of stock")
-        if row["expected_coverage_days"] <= 3:
-            reasons.append("Coverage below 3 days")
-        if row["expected_coverage_days"] <= 7:
-            reasons.append("Coverage below 7 days")
-        if row["safety_stock"] > row["quantity_on_hand"]:
-            reasons.append("Below safety stock")
-        if row["lead_time_demand"] > row["quantity_on_hand"]:
-            reasons.append("Insufficient for lead time")
-        if not reasons:
-            reasons.append("Adequate stock")
-        return "; ".join(reasons)
+    df["reorder_reasoning"] = "Adequate stock"
+    for r in reasons:
+        df["reorder_reasoning"] = np.where(
+            r != "",
+            np.where(df["reorder_reasoning"] == "Adequate stock", r, df["reorder_reasoning"] + "; " + r),
+            df["reorder_reasoning"],
+        )
 
-    df["reorder_reasoning"] = df.apply(_reasoning, axis=1)
-
-    # Stockout risk (mirror existing logic but computed independently)
-    def _stockout_risk(row):
-        if row["quantity_on_hand"] <= 0:
-            return "HIGH"
-        if row["quantity_on_hand"] <= row["reorder_point"]:
-            return "HIGH"
-        if row["forecast_demand_14d"] > row["quantity_on_hand"]:
-            return "MEDIUM"
-        return "LOW"
-
-    df["stockout_risk_computed"] = df.apply(_stockout_risk, axis=1)
+    # Stockout risk vectorized
+    stockout_conditions = [
+        df["quantity_on_hand"] <= 0,
+        df["quantity_on_hand"] <= df["reorder_point"],
+        df["forecast_demand_14d"] > df["quantity_on_hand"],
+    ]
+    stockout_choices = ["HIGH", "HIGH", "MEDIUM"]
+    df["stockout_risk_computed"] = np.select(stockout_conditions, stockout_choices, default="LOW")
 
     # Order value
     df["reorder_value"] = df["recommended_quantity"] * df["cost_price"]

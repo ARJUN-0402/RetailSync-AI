@@ -77,46 +77,48 @@ engine = get_engine()
 def load_data():
     data = {}
     csv_files = {
-        "features": "data/processed/features_daily.csv",
-        "forecasts": "data/processed/forecasts_next_14d.csv",
-        "inv_intel": "data/processed/inventory_intelligence.csv",
-        "anomalies": "data/processed/anomalies.csv",
-        "product_segments": "data/processed/product_segments.csv",
-        "store_segments": "data/processed/store_segments.csv",
-        "warehouse_segments": "data/processed/warehouse_segments.csv",
-        "wh_opt": "data/processed/warehouse_optimization.csv",
+        "features": ("data/processed/features_daily.csv", {"parse_dates": ["date"]}),
+        "forecasts": ("data/processed/forecasts_next_14d.csv", {"parse_dates": ["date"]}),
+        "inv_intel": ("data/processed/inventory_intelligence.csv", {}),
+        "anomalies": ("data/processed/anomalies.csv", {"parse_dates": ["date"]}),
+        "product_segments": ("data/processed/product_segments.csv", {}),
+        "store_segments": ("data/processed/store_segments.csv", {}),
+        "warehouse_segments": ("data/processed/warehouse_segments.csv", {}),
+        "wh_opt": ("data/processed/warehouse_optimization.csv", {}),
     }
-    for name, path in csv_files.items():
+    for name, (path, kwargs) in csv_files.items():
         full_path = os.path.join(_project_root, path)
         if os.path.exists(full_path):
             try:
-                if name in ("features", "forecasts", "anomalies"):
-                    data[name] = pd.read_csv(full_path, parse_dates=["date"])
-                else:
-                    data[name] = pd.read_csv(full_path)
+                data[name] = pd.read_csv(full_path, **kwargs)
             except Exception as exc:
                 logger.warning("Could not load %s: %s", path, exc)
                 st.warning(f"Could not load {path}: {exc}")
         else:
             data[name] = pd.DataFrame()
 
-    db_tables = {
-        "products": "SELECT * FROM products",
-        "stores": "SELECT * FROM stores",
-        "suppliers": "SELECT * FROM suppliers",
-        "warehouses": "SELECT * FROM warehouses",
-        "sales": "SELECT * FROM sales",
-        "inventory": "SELECT * FROM inventory",
+    db_queries = {
+        "products": "SELECT product_id, product_name, category, subcategory, unit_price, cost_price, supplier_id FROM products",
+        "stores": "SELECT store_id, store_name, city, state, store_type FROM stores",
+        "suppliers": "SELECT supplier_id, supplier_name, country, lead_time_days, reliability_score FROM suppliers",
+        "warehouses": "SELECT warehouse_id, warehouse_name, city, state, capacity_m3, supplier_id FROM warehouses",
+        "sales": "SELECT date, product_id, store_id, quantity_sold, unit_price, revenue FROM sales",
+        "inventory": "SELECT date, product_id, store_id, quantity_on_hand, reorder_point, max_stock_level, warehouse_id FROM inventory",
         "inventory_alerts": "SELECT * FROM inventory_alerts",
         "anomaly_flags": "SELECT * FROM anomaly_flags",
     }
-    for name, query in db_tables.items():
+    for name, query in db_queries.items():
         try:
             data[name] = pd.read_sql(query, engine)
         except Exception as exc:
             logger.warning("Could not load %s from database: %s", name, exc)
             st.warning(f"Could not load {name} from database: {exc}")
             data[name] = pd.DataFrame()
+
+    if "date" in data.get("sales", pd.DataFrame()).columns:
+        data["sales"]["date"] = pd.to_datetime(data["sales"]["date"])
+    if "date" in data.get("inventory", pd.DataFrame()).columns:
+        data["inventory"]["date"] = pd.to_datetime(data["inventory"]["date"])
 
     return data
 

@@ -9,7 +9,6 @@ import plotly.express as px
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_data_table,
     render_empty_state,
     render_pie_chart,
@@ -21,8 +20,6 @@ logger = logging.getLogger(__name__)
 
 def render_segmentation_page(data: dict) -> None:
     """Render the segmentation page."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Segmentation</div>

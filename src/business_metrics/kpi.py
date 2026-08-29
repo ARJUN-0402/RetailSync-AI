@@ -27,6 +27,14 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
+_FORECAST_ACCURACY_CACHE: dict[str, dict] = {}
+
+
+def _forecast_accuracy_cache_key(features_df, model_package) -> str:
+    features_hash = pd.util.hash_pandas_object(features_df).sum() if features_df is not None else 0
+    model_hash = id(model_package) if model_package is not None else 0
+    return f"{features_hash}:{model_hash}"
+
 
 # ============================================================
 # 1. FORECAST ACCURACY
@@ -57,6 +65,10 @@ def compute_forecast_accuracy(
         Dict with overall metrics and breakdowns.
     """
     config = config or BusinessConfig()
+    cache_key = _forecast_accuracy_cache_key(features_df, model_package)
+    if cache_key in _FORECAST_ACCURACY_CACHE:
+        return _FORECAST_ACCURACY_CACHE[cache_key]
+
     result = {
         "overall": {},
         "by_product": pd.DataFrame(),

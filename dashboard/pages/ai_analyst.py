@@ -8,9 +8,9 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_alert,
     render_empty_state,
+    render_kpi_card,
     render_section_header,
 )
 from src.ai_analyst.config import AIAnalystConfig
@@ -36,12 +36,13 @@ SUGGESTED_QUESTIONS = [
 def _init_session_state() -> None:
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    if len(st.session_state.chat_history) > 50:
+        st.session_state.chat_history = st.session_state.chat_history[-50:]
+    if len(st.session_state.chat_history) > 50:
+        st.session_state.chat_history = st.session_state.chat_history[-50:]
 
 
 def render_ai_analyst_page(data: dict) -> None:
-    inject_global_css()
-    _init_session_state()
-
     st.markdown(
         """
         <div class="brand-header">AI Analyst</div>

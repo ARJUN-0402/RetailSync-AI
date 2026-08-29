@@ -9,7 +9,6 @@ import plotly.express as px
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_alert,
     render_data_table,
     render_empty_state,
@@ -22,8 +21,6 @@ logger = logging.getLogger(__name__)
 
 def render_model_performance_page(data: dict, models: dict) -> None:
     """Render the model performance page."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Model Performance</div>
@@ -247,11 +244,11 @@ def render_model_performance_page(data: dict, models: dict) -> None:
     render_section_header("Feature Importance", subtitle="Top features driving model predictions")
 
     if model_pkg and isinstance(model_pkg, dict) and "model" in model_pkg:
-        try:
-            from src.explainability import ExplainabilityEngine, global_importance_chart
+        from dashboard.explainability_page import get_engine
 
-            model_name = model_pkg.get("model_name", type(model_pkg["model"]).__name__)
-            engine = ExplainabilityEngine(model_pkg, background_sample_size=100)
+        model_name = model_pkg.get("model_name", type(model_pkg["model"]).__name__)
+        try:
+            engine = get_engine(model_name, 100)
             if features is not None and not features.empty:
                 engine.set_background(features)
                 with st.spinner("Computing feature importance..."):

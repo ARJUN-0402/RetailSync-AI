@@ -20,7 +20,6 @@ from src.business_metrics.kpi import (
 from src.business_metrics.reorder import generate_reorder_recommendations
 from dashboard.components.ui import (
     COLORS,
-    inject_global_css,
     render_alert,
     render_data_table,
     render_kpi_card,
@@ -29,36 +28,6 @@ from dashboard.components.ui import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _load_data(engine):
-    @st.cache_data(ttl=300)
-    def _load():
-        inv_intel = pd.read_csv("data/processed/inventory_intelligence.csv")
-        forecasts = pd.read_csv(
-            "data/processed/forecasts_next_14d.csv", parse_dates=["date"]
-        )
-        anomalies = pd.read_csv("data/processed/anomalies.csv", parse_dates=["date"])
-        features = pd.read_csv("data/processed/features_daily.csv", parse_dates=["date"])
-        products = pd.read_sql("SELECT * FROM products", engine)
-        stores = pd.read_sql("SELECT * FROM stores", engine)
-        suppliers = pd.read_sql("SELECT * FROM suppliers", engine)
-        sales = pd.read_sql("SELECT * FROM sales", engine)
-        inventory = pd.read_sql("SELECT * FROM inventory", engine)
-
-        return {
-            "inv_intel": inv_intel,
-            "forecasts": forecasts,
-            "anomalies": anomalies,
-            "features": features,
-            "products": products,
-            "stores": stores,
-            "suppliers": suppliers,
-            "sales": sales,
-            "inventory": inventory,
-        }
-
-    return _load()
 
 
 def _apply_filters(data, selected_product, selected_category, selected_store, selected_warehouse, date_range):
@@ -80,8 +49,6 @@ def _apply_filters(data, selected_product, selected_category, selected_store, se
 
 
 def render_business_intelligence_page(engine, data: dict):
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Business Intelligence</div>
@@ -90,49 +57,45 @@ def render_business_intelligence_page(engine, data: dict):
         unsafe_allow_html=True,
     )
 
-    # Filters
-    product_options = ["All"] + sorted(data["products"]["product_id"].unique().tolist())
-    category_options = ["All"] + sorted(data["products"]["category"].unique().tolist())
-    store_options = ["All"] + sorted(data["stores"]["store_id"].unique().tolist())
-    warehouse_options = ["All"] + sorted(
-        data["inv_intel"]["warehouse_id"].dropna().unique().tolist()
-    )
+    products = data.get("products")
+    stores = data.get("stores")
+    features = data.get("features")
+    inv_intel = data.get("inv_intel")
+    forecasts = data.get("forecasts")
+    suppliers = data.get("suppliers")
 
-    selected_product = st.sidebar.selectbox("Product", product_options, key="bi_product")
-    selected_category = st.sidebar.selectbox("Category", category_options, key="bi_category")
-    selected_store = st.sidebar.selectbox("Store", store_options, key="bi_store")
-    selected_warehouse = st.sidebar.selectbox("Warehouse", warehouse_options, key="bi_warehouse")
+    with st.sidebar.form("bi_filters"):
+        product_options = ["All"] + sorted(products["product_id"].unique().tolist()) if products is not None and not products.empty else ["All"]
+        category_options = ["All"] + sorted(products["category"].unique().tolist()) if products is not None and "category" in products.columns else ["All"]
+        store_options = ["All"] + sorted(stores["store_id"].unique().tolist()) if stores is not None and not stores.empty else ["All"]
+        warehouse_options = ["All"] + sorted(
+            inv_intel["warehouse_id"].dropna().unique().tolist()
+        ) if inv_intel is not None and "warehouse_id" in inv_intel.columns else ["All"]
 
-    date_range = st.sidebar.date_input(
-        "Date Range",
-        value=(
-            data["features"]["date"].min().date() if "date" in data["features"].columns else None,
-            data["features"]["date"].max().date() if "date" in data["features"].columns else None,
-        ),
-        key="bi_dates",
-    )
+        selected_product = st.selectbox("Product", product_options, key="bi_product")
+        selected_category = st.selectbox("Category", category_options, key="bi_category")
+        selected_store = st.selectbox("Store", store_options, key="bi_store")
+        selected_warehouse = st.selectbox("Warehouse", warehouse_options, key="bi_warehouse")
 
-    # Apply filters
-    inv_intel_filtered = _apply_filters(
-        data["inv_intel"], selected_product, selected_category, selected_store, selected_warehouse, date_range
-    )
+        date_range = st.date_input(
+            "Date Range",
+            value=(
+                features["date"].min().date() if features is not None and "date" in features.columns else None,
+                features["date"].max().date() if features is not None and "date" in features.columns else None,
+            ),
+            key="bi_dates",
+        )
+        st.form_submit_button("Apply Filters", use_container_width=True)
+
     products_filtered = _apply_filters(
-        data["products"], selected_product, selected_category, None, None, None
+        products, selected_product, selected_category, None, None, None
+    )
+    inv_intel_filtered = _apply_filters(
+        inv_intel, selected_product, selected_category, selected_store, selected_warehouse, date_range
     )
     forecasts_filtered = _apply_filters(
-        data["forecasts"], selected_product, selected_category, selected_store, None, None
+        forecasts, selected_product, selected_category, selected_store, None, None
     )
-
-    # Load model if available
-    model_package = None
-    import os as _os
-    import joblib as _joblib
-    model_path = "models/demand_forecaster.pkl"
-    if _os.path.exists(model_path):
-        try:
-            model_package = _joblib.load(model_path)
-        except Exception:
-            pass
 
     config = BusinessConfig()
 
@@ -155,8 +118,8 @@ def render_business_intelligence_page(engine, data: dict):
             stockout_result, overstock_result, config
         )
         forecast_accuracy = compute_forecast_accuracy(
-            data["features"], model_package, config
-        )
+            features, models.get("demand_forecaster"), config
+        ) if features is not None and not features.empty else {}
         exec_kpis = compute_executive_kpis(
             inv_intel_filtered,
             products_filtered,

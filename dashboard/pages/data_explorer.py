@@ -7,7 +7,6 @@ import logging
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_data_table,
     render_empty_state,
     render_section_header,
@@ -18,8 +17,6 @@ logger = logging.getLogger(__name__)
 
 def render_data_explorer_page(data: dict) -> None:
     """Render the data explorer page."""
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Data Explorer</div>

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import streamlit as st
 from sqlalchemy import create_engine
 
 from .exceptions import ToolExecutionError
@@ -23,10 +24,12 @@ DATABASE_PATH = os.path.join(_PROJECT_ROOT, "database", "retailsync.db")
 PROCESSED_DIR = os.path.join(_PROJECT_ROOT, "data", "processed")
 
 
+@st.cache_resource
 def _get_engine():
     return create_engine(f"sqlite:///{DATABASE_PATH}")
 
 
+@st.cache_data(ttl=300)
 def _load_csv(name: str) -> pd.DataFrame:
     path = os.path.join(PROCESSED_DIR, name)
     if not os.path.exists(path):
@@ -40,6 +43,7 @@ def _load_csv(name: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=300)
 def _get_inventory_alerts() -> pd.DataFrame:
     engine = _get_engine()
     try:
@@ -48,6 +52,7 @@ def _get_inventory_alerts() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=300)
 def _get_anomaly_flags() -> pd.DataFrame:
     engine = _get_engine()
     try:
@@ -56,6 +61,7 @@ def _get_anomaly_flags() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=300)
 def _get_warehouse_optimization() -> pd.DataFrame:
     engine = _get_engine()
     try:
@@ -488,9 +494,9 @@ def get_executive_kpis() -> dict[str, Any]:
         from src.business_metrics.reorder import generate_reorder_recommendations
 
         inv_intel = _load_csv("inventory_intelligence.csv")
-        products = pd.read_sql("SELECT * FROM products", _get_engine())
+        products = pd.read_sql("SELECT product_id, category, cost_price, unit_price, supplier_id FROM products", _get_engine())
         forecasts = _load_csv("forecasts_next_14d.csv")
-        suppliers = pd.read_sql("SELECT * FROM suppliers", _get_engine())
+        suppliers = pd.read_sql("SELECT supplier_id, lead_time_days FROM suppliers", _get_engine())
 
         config = BusinessConfig()
         stockout = compute_stockout_cost(inv_intel, products, config) if not inv_intel.empty else {}
@@ -527,9 +533,9 @@ def get_reorder_recommendations(
         from src.business_metrics.reorder import generate_reorder_recommendations
 
         inv_intel = _load_csv("inventory_intelligence.csv")
-        products = pd.read_sql("SELECT * FROM products", _get_engine())
+        products = pd.read_sql("SELECT product_id, category, cost_price, supplier_id FROM products", _get_engine())
         forecasts = _load_csv("forecasts_next_14d.csv")
-        suppliers = pd.read_sql("SELECT * FROM suppliers", _get_engine())
+        suppliers = pd.read_sql("SELECT supplier_id, lead_time_days FROM suppliers", _get_engine())
         config = BusinessConfig()
         df = generate_reorder_recommendations(inv_intel, products, forecasts, suppliers, config)
         if df.empty:
@@ -566,12 +572,12 @@ def get_reorder_recommendations(
 
 def get_forecast_explanation(product_id: str, store_id: str) -> dict[str, Any]:
     try:
-        from src.explainability import build_explanation, load_explainability_engine
+        from dashboard.explainability_page import get_engine
 
         features = _load_csv("features_daily.csv")
         if features.empty:
             return {"error": "Feature data not available for explanation."}
-        engine = load_explainability_engine()
+        engine = get_engine("demand_forecaster", 100)
         engine.set_background(features)
         sub = features[(features["product_id"] == product_id) & (features["store_id"] == store_id)].sort_values("date")
         if sub.empty:
