@@ -1,33 +1,40 @@
 """RetailSync AI - AI-Powered Retail Demand Forecasting & Supply Chain Intelligence Platform."""
 
-import os
+from pathlib import Path
+import sys
 
-import joblib
-import pandas as pd
-import streamlit as st
-from sqlalchemy import create_engine
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-from .dashboard.business_intelligence import render_business_intelligence_page
-from dashboard.components.ui import (
-    inject_global_css,
-    render_sidebar_branding,
-    render_sidebar_footer,
-)
-from dashboard.explainability_page import render_explainability_page
-from dashboard.pages.anomalies import render_anomalies_page
-from dashboard.pages.ai_analyst import render_ai_analyst_page
-from dashboard.pages.data_explorer import render_data_explorer_page
-from dashboard.pages.demand_forecast import render_demand_forecast_page
-from dashboard.pages.inventory import render_inventory_page
-from dashboard.pages.model_performance import render_model_performance_page
-from dashboard.pages.overview import render_overview_page
-from dashboard.pages.segmentation import render_segmentation_page
-from dashboard.pages.warehouse import render_warehouse_page
-from src.config import settings
-from src.health import get_health_status
-from src.utils.logging import setup_logging
+import os  # noqa: E402
 
-_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import joblib  # noqa: E402
+import pandas as pd  # noqa: E402
+import streamlit as st  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+
+from dashboard.business_intelligence import render_business_intelligence_page  # noqa: E402
+from dashboard.components.ui import (  # noqa: E402
+    inject_global_css,  # noqa: E402
+    render_sidebar_branding,  # noqa: E402
+    render_sidebar_footer,  # noqa: E402
+)  # noqa: E402
+from dashboard.explainability_page import render_explainability_page  # noqa: E402
+from dashboard.pages.anomalies import render_anomalies_page  # noqa: E402
+from dashboard.pages.ai_analyst import render_ai_analyst_page  # noqa: E402
+from dashboard.pages.data_explorer import render_data_explorer_page  # noqa: E402
+from dashboard.pages.demand_forecast import render_demand_forecast_page  # noqa: E402
+from dashboard.pages.inventory import render_inventory_page  # noqa: E402
+from dashboard.pages.model_performance import render_model_performance_page  # noqa: E402
+from dashboard.pages.overview import render_overview_page  # noqa: E402
+from dashboard.pages.segmentation import render_segmentation_page  # noqa: E402
+from dashboard.pages.warehouse import render_warehouse_page  # noqa: E402
+from src.config import settings  # noqa: E402
+from src.health import get_health_status  # noqa: E402
+from src.utils.logging import setup_logging  # noqa: E402
+
+
 
 logger = setup_logging(__name__)
 
@@ -51,7 +58,7 @@ def load_models():
         "warehouse_clusterer": "models/warehouse_clusterer.pkl",
     }
     for name, path in model_files.items():
-        full_path = os.path.join(_project_root, path)
+        full_path = os.path.join(str(_PROJECT_ROOT), path)
         if os.path.exists(full_path):
             try:
                 models[name] = joblib.load(full_path)
@@ -66,7 +73,7 @@ models = load_models()
 
 @st.cache_resource
 def get_engine():
-    db_path = os.path.join(_project_root, settings.database.path)
+    db_path = os.path.join(str(_PROJECT_ROOT), settings.database.path)
     return create_engine(f"sqlite:///{db_path}")
 
 
@@ -87,7 +94,7 @@ def load_data():
         "wh_opt": ("data/processed/warehouse_optimization.csv", {}),
     }
     for name, (path, kwargs) in csv_files.items():
-        full_path = os.path.join(_project_root, path)
+        full_path = os.path.join(str(_PROJECT_ROOT), path)
         if os.path.exists(full_path):
             try:
                 data[name] = pd.read_csv(full_path, **kwargs)
