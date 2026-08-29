@@ -1,4 +1,4 @@
-# Python
+'# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,13 +41,23 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
-*.csv
+!data/processed/anomalies.csv
+!data/processed/features_daily.csv
+!data/processed/forecasts_next_14d.csv
+!data/processed/inventory_intelligence.csv
+!data/processed/product_segments.csv
+!data/processed/store_segments.csv
+!data/processed/warehouse_segments.csv
+!data/processed/warehouse_optimization.csv
 *.db
+!database/retailsync.db
 *.sqlite
+!database/retailsync.db
 
 # Models
 models/*
 !models/.gitkeep
+!models/*.pkl
 
 # Logs
 logs/
@@ -65,3 +75,4 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+'
