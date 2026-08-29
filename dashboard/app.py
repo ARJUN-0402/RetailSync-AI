@@ -40,32 +40,65 @@ def load_data():
     """Load all processed data and models into memory."""
     _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-    # Load data CSVs
-    data = {
-        "features": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "features_daily.csv", parse_dates=["date"]),
-        "forecasts": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "forecasts_next_14d.csv", parse_dates=["date"]),
-        "inv_intel": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "inventory_intelligence.csv"),
-        "anomalies": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "anomalies.csv", parse_dates=["date"]),
-        "wh_opt": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouse_optimization.csv"),
-        "product_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "product_segments.csv"),
-        "store_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "store_segments.csv"),
-        "warehouse_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouse_segments.csv"),
-        "products": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "products.csv"),
-        "stores": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "stores.csv"),
-        "suppliers": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "suppliers.csv"),
-        "warehouses": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouses.csv"),
-    }
+    # Load data CSVs - try multiple possible locations
+    csv_dirs = [
+        _PROJECT_ROOT / "data" / "processed",
+        Path("data/processed"),
+        Path(__file__).resolve().parent.parent / "data" / "processed",
+    ]
 
-    # Load ML models
-    models = {
-        "demand_forecaster": joblib.load(str(_PROJECT_ROOT / "models" / "demand_forecaster.pkl")),
-        "product_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "product_clusterer.pkl")),
-        "store_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "store_clusterer.pkl")),
-        "warehouse_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "warehouse_clusterer.pkl")),
-    }
+    data = {}
+    for csv_dir in csv_dirs:
+        if csv_dir.exists():
+            try:
+                data = {
+                    "features": pd.read_csv(str(csv_dir / "features_daily.csv"), parse_dates=["date"]),
+                    "forecasts": pd.read_csv(str(csv_dir / "forecasts_next_14d.csv"), parse_dates=["date"]),
+                    "inv_intel": pd.read_csv(str(csv_dir / "inventory_intelligence.csv")),
+                    "anomalies": pd.read_csv(str(csv_dir / "anomalies.csv"), parse_dates=["date"]),
+                    "wh_opt": pd.read_csv(str(csv_dir / "warehouse_optimization.csv")),
+                    "product_segments": pd.read_csv(str(csv_dir / "product_segments.csv")),
+                    "store_segments": pd.read_csv(str(csv_dir / "store_segments.csv")),
+                    "warehouse_segments": pd.read_csv(str(csv_dir / "warehouse_segments.csv")),
+                    "products": pd.read_csv(str(csv_dir / "products.csv")),
+                    "stores": pd.read_csv(str(csv_dir / "stores.csv")),
+                    "suppliers": pd.read_csv(str(csv_dir / "suppliers.csv")),
+                    "warehouses": pd.read_csv(str(csv_dir / "warehouses.csv")),
+                }
+                break
+            except FileNotFoundError:
+                continue
 
-    # Create database engine
-    engine = create_engine(f"sqlite:///{_PROJECT_ROOT / 'database' / 'retailsync.db'}")
+    if not data:
+        raise FileNotFoundError("Could not find processed CSV data in any expected location")
+
+    # Load ML models - try multiple possible locations
+    models_dirs = [
+        _PROJECT_ROOT / "models",
+        Path("models"),
+        Path(__file__).resolve().parent.parent / "models",
+    ]
+
+    models = {}
+    for models_dir in models_dirs:
+        if models_dir.exists():
+            try:
+                models = {
+                    "demand_forecaster": joblib.load(str(models_dir / "demand_forecaster.pkl")),
+                    "product_clusterer": joblib.load(str(models_dir / "product_clusterer.pkl")),
+                    "store_clusterer": joblib.load(str(models_dir / "store_clusterer.pkl")),
+                    "warehouse_clusterer": joblib.load(str(models_dir / "warehouse_clusterer.pkl")),
+                }
+                break
+            except FileNotFoundError:
+                continue
+
+    if not models:
+        raise FileNotFoundError("Could not find model files in any expected location")
+
+    # Create database engine using the same root
+    database_path = str(_PROJECT_ROOT / "database" / "retailsync.db")
+    engine = create_engine(f"sqlite:///{database_path}")
 
     return data, models, engine
 
