@@ -47,6 +47,61 @@ st.set_page_config(
 
 inject_global_css()
 
+def check_required_artifacts():
+    import sqlite3
+    errors = []
+    # Check database file
+    db_path = os.path.join(str(_PROJECT_ROOT), settings.database.path)
+    if not os.path.exists(db_path):
+        errors.append(f"Database file not found: {db_path}")
+    else:
+        # Check required tables
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = {r[0] for r in c.fetchall()}
+            conn.close()
+            required_tables = {'products', 'stores', 'suppliers', 'warehouses', 'sales', 'inventory', 'inventory_alerts', 'anomaly_flags'}
+            missing = required_tables - tables
+            if missing:
+                errors.append(f"Missing tables in database: {missing}")
+        except Exception as e:
+            errors.append(f"Failed to check database tables: {e}")
+    # Check model files
+    model_files = [
+        "models/demand_forecaster.pkl",
+        "models/product_clusterer.pkl",
+        "models/store_clusterer.pkl",
+        "models/warehouse_clusterer.pkl"
+    ]
+    for mf in model_files:
+        mf_path = os.path.join(str(_PROJECT_ROOT), mf)
+        if not os.path.exists(mf_path):
+            errors.append(f"Model file not found: {mf}")
+    # Check CSV files
+    csv_files = [
+        "data/processed/anomalies.csv",
+        "data/processed/features_daily.csv",
+        "data/processed/forecasts_next_14d.csv",
+        "data/processed/inventory_intelligence.csv",
+        "data/processed/product_segments.csv",
+        "data/processed/store_segments.csv",
+        "data/processed/warehouse_segments.csv",
+        "data/processed/warehouse_optimization.csv"
+    ]
+    for cf in csv_files:
+        cf_path = os.path.join(str(_PROJECT_ROOT), cf)
+        if not os.path.exists(cf_path):
+            errors.append(f"CSV file not found: {cf}")
+    return errors
+# Validate required artifacts before loading models and data
+artifact_errors = check_required_artifacts()
+if artifact_errors:
+    st.error("Deployment configuration error: The following required artifacts are missing or invalid:")
+    for error in artifact_errors:
+        st.error(error)
+    st.stop()
 
 @st.cache_resource
 def load_models():
@@ -221,3 +276,5 @@ try:
 except Exception as exc:
     logger.error("Dashboard page error: %s", exc, exc_info=True)
     st.error(f"An unexpected error occurred: {exc}")
+
+
