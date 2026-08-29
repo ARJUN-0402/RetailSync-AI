@@ -10,7 +10,6 @@ import streamlit as st
 from dashboard.components.ui import (
     render_alert,
     render_empty_state,
-    render_kpi_card,
     render_section_header,
 )
 from src.ai_analyst.config import AIAnalystConfig

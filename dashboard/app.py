@@ -192,7 +192,7 @@ try:
     if page == "📊 Executive Overview":
         render_overview_page(data, models, engine)
     elif page == "📈 Business Intelligence":
-        render_business_intelligence_page(engine, data)
+        render_business_intelligence_page(engine, data, models)
     elif page == "🔮 Demand Forecast":
         render_demand_forecast_page(data, models)
     elif page == "📦 Inventory Intelligence":

@@ -573,6 +573,7 @@ def get_reorder_recommendations(
 def get_forecast_explanation(product_id: str, store_id: str) -> dict[str, Any]:
     try:
         from dashboard.explainability_page import get_engine
+        from src.explainability import build_explanation
 
         features = _load_csv("features_daily.csv")
         if features.empty:

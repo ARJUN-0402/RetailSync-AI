@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 from .config import BusinessConfig
-from .utils import safe_num, safe_div
+from .utils import safe_num
 
 logger = logging.getLogger(__name__)
 

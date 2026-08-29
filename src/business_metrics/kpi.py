@@ -223,6 +223,7 @@ def compute_forecast_accuracy(
     by_category = by_category.sort_values("mae", ascending=False)
     result["by_category"] = by_category
 
+    _FORECAST_ACCURACY_CACHE[cache_key] = result
     return result
 
 

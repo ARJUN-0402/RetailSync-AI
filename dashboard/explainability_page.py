@@ -19,7 +19,6 @@ import pandas as pd
 import streamlit as st
 
 from dashboard.components.ui import (
-    inject_global_css,
     render_alert,
     render_kpi_card,
     render_section_header,
@@ -35,6 +34,8 @@ from src.explainability import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SHAP_SUMMARY_CACHE: dict[tuple, tuple] = {}
 
 
 @st.cache_resource(show_spinner="Loading explainability engine...")
@@ -57,8 +58,6 @@ def _model_package(models: dict) -> dict | None:
 
 
 def render_explainability_page(models: dict, data: dict) -> None:
-    inject_global_css()
-
     st.markdown(
         """
         <div class="brand-header">Model Explainability</div>
@@ -174,8 +173,12 @@ def _render_global(engine: ExplainabilityEngine, features: pd.DataFrame) -> None
     with st.spinner("Computing SHAP summary..."):
         try:
             explainer = engine._get_explainer()
-            vals = explainer.shap_values(engine._get_background_sample().values)
-            fig = shap_summary_chart(global_exp, vals, engine._get_background_sample(), max_features=15, sample=200)
+            cache_key = (id(engine), id(features), sample_size)
+            if cache_key not in _SHAP_SUMMARY_CACHE:
+                vals = explainer.shap_values(engine._get_background_sample().values)
+                _SHAP_SUMMARY_CACHE[cache_key] = (vals, engine._get_background_sample())
+            vals, bg = _SHAP_SUMMARY_CACHE[cache_key]
+            fig = shap_summary_chart(global_exp, vals, bg, max_features=15, sample=200)
             st.plotly_chart(fig, use_container_width=True)
         except Exception as exc:
             render_alert(

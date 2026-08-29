@@ -48,7 +48,7 @@ def _apply_filters(data, selected_product, selected_category, selected_store, se
     return filtered
 
 
-def render_business_intelligence_page(engine, data: dict):
+def render_business_intelligence_page(engine, data: dict, models: dict):
     st.markdown(
         """
         <div class="brand-header">Business Intelligence</div>
@@ -62,7 +62,7 @@ def render_business_intelligence_page(engine, data: dict):
     features = data.get("features")
     inv_intel = data.get("inv_intel")
     forecasts = data.get("forecasts")
-    suppliers = data.get("suppliers")
+    features = data.get("features")
 
     with st.sidebar.form("bi_filters"):
         product_options = ["All"] + sorted(products["product_id"].unique().tolist()) if products is not None and not products.empty else ["All"]

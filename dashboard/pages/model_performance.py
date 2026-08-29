@@ -15,6 +15,7 @@ from dashboard.components.ui import (
     render_kpi_row,
     render_section_header,
 )
+from src.explainability import global_importance_chart
 
 logger = logging.getLogger(__name__)
 
