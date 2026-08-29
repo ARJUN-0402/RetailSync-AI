@@ -184,3 +184,27 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def test_overview_reorder_columns_no_keyerror():
+    """Regression test: overview.py reorder display must not reference a missing column."""
+    inv_intel_path = os.path.join(DATA_DIR, "inventory_intelligence.csv")
+    assert os.path.exists(inv_intel_path), f"Missing {inv_intel_path}"
+
+    inv_intel = pd.read_csv(inv_intel_path)
+
+    reorder_items = inv_intel[
+        inv_intel["reorder_urgency"].isin(["URGENT", "SOON"])
+    ].sort_values("composite_risk_score", ascending=False)
+
+    display_cols = [
+        "product_id",
+        "store_id",
+        "quantity_on_hand",
+        "reorder_urgency",
+        "recommended_action",
+        "stock_coverage_days",
+    ]
+
+    result = reorder_items.head(10)[display_cols].copy()
+    assert list(result.columns) == display_cols

@@ -12,8 +12,8 @@ These tests guard against the two CI blockers:
 from __future__ import annotations
 
 import logging
-import os
 import sqlite3
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -173,10 +173,21 @@ def test_redact_text_helper():
 
 
 @pytest.fixture
-def clean_db(tmp_path) -> str:
-    """Create a fresh, data-loaded database from the canonical schema."""
+def clean_db(tmp_path, monkeypatch, source_data_dir) -> str:
+    """Create a fresh, data-loaded database from the canonical schema.
+
+    The shared ``settings`` object is redirected in place (via monkeypatch, so
+    the real paths are restored afterwards) and ``DATABASE_PATH`` is set so
+    freshly imported copies derive the same temporary path. The schema still
+    comes from the canonical ``database/schema.sql``; only the loaded rows come
+    from the deterministic fixture dataset instead of ``data/processed``.
+    """
+    from src.config import settings
+
     db_file = str(tmp_path / "retailsync_test.db")
-    _use_temp_db(db_file)
+    monkeypatch.setenv("DATABASE_PATH", db_file)
+    monkeypatch.setattr(settings.database, "path", db_file)
+    monkeypatch.setattr(settings.paths, "processed_data", Path(source_data_dir))
     init_db.main()
     return db_file
 
@@ -293,53 +304,23 @@ def test_anomaly_flags_columns_match_usage(clean_db):
     assert {"detection_methods", "z_score", "anomaly_type"}.issubset(cols)
 
 
-def _use_temp_db(db_file: str) -> None:
-    """Point the shared ``settings.database`` at a temp file in-place.
+def test_segments_persist_to_db(pipeline_db):
+    """segmentation.py must write its segment tables to the database.
 
-    We mutate the already-imported ``settings`` object rather than reloading the
-    module, so other tests keep seeing a consistent config. ``DATABASE_PATH`` is
-    also set so freshly imported copies derive the same path.
+    ``pipeline_db`` runs the real segmentation stage against an isolated
+    database, temporary processed data and a temporary models directory, so the
+    check never depends on (or overwrites) production artifacts.
     """
-    os.environ["DATABASE_PATH"] = db_file
-    from src.config import settings
-
-    settings.database.path = db_file
-
-
-def test_segments_persist_to_db(tmp_path):
-    """segmentation.py must write its segment tables to the database."""
-    from src.clustering import segmentation
-
-    db_file = str(tmp_path / "retailsync_seg.db")
-    _use_temp_db(db_file)
-    init_db.main()
-
-    features = pd.read_csv("data/processed/features_daily.csv", parse_dates=["date"])
-    engine = create_engine(f"sqlite:///{db_file}")
-    inventory_df = pd.read_sql("SELECT * FROM inventory", engine)
-    inventory_df["date"] = pd.to_datetime(inventory_df["date"])
-
-    segmentation.segment_products(features)
-    segmentation.segment_stores(features)
-    segmentation.segment_warehouses(features, inventory_df)
-
+    engine = create_engine(f"sqlite:///{pipeline_db.db_path}")
     with engine.connect() as conn:
         for table in ["product_segments", "store_segments", "warehouse_segments"]:
             count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()[0]
             assert count > 0, f"{table} was not persisted"
 
 
-def test_load_alerts_against_clean_db(tmp_path):
+def test_load_alerts_against_clean_db(pipeline_db):
     """load_alerts.load() should insert rows into a freshly initialized DB."""
-    from src.inventory import load_alerts
-
-    db_file = str(tmp_path / "retailsync_alerts.db")
-    _use_temp_db(db_file)
-    init_db.main()
-
-    load_alerts.load()
-
-    engine = create_engine(f"sqlite:///{db_file}")
+    engine = create_engine(f"sqlite:///{pipeline_db.db_path}")
     with engine.connect() as conn:
         count = conn.execute(text("SELECT COUNT(*) FROM inventory_alerts")).fetchone()[0]
     assert count > 0, "load_alerts did not insert any rows"

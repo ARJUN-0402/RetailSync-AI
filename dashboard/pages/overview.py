@@ -334,7 +334,7 @@ def render_overview_page(data: dict, models: dict, engine) -> None:
                     "quantity_on_hand",
                     "reorder_urgency",
                     "recommended_action",
-                    "days_until_stockout",
+                    "stock_coverage_days",
                 ]
             ].copy()
             render_data_table(

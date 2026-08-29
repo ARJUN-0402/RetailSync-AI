@@ -1,6 +1,13 @@
 """
 Test suite for RetailSync AI pipeline.
 
+Database-backed tests use the ``pipeline_db`` fixture (see tests/conftest.py),
+which builds a temporary database from the canonical ``database/schema.sql`` and
+populates it by running the real pipeline stages over a small deterministic
+dataset. They must not read the local ``database/retailsync.db``, whose
+analytics tables are empty whenever database initialization ran more recently
+than the alert/anomaly/segmentation stages.
+
 Run with:
     python -m pytest tests/test_pipeline.py -v
     # or
@@ -8,7 +15,10 @@ Run with:
 """
 
 import os
+import shutil
 import sys
+import tempfile
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -19,7 +29,6 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
-DB_PATH = os.path.join(PROJECT_ROOT, "database", "retailsync.db")
 
 REQUIRED_FILES = [
     "data/processed/features_daily.csv",
@@ -101,12 +110,18 @@ def test_data_files_exist():
         print(f"  [PASS] {file_path} ({size:,} bytes)")
 
 
-def test_database_tables():
-    """Test that database tables exist and have data."""
-    print("\n=== Testing Database Tables ===")
-    assert os.path.exists(DB_PATH), f"Database not found at {DB_PATH}"
+def test_database_tables(pipeline_db):
+    """Test that database tables exist and have data.
 
-    engine = create_engine(f"sqlite:///{DB_PATH}")
+    Runs against the deterministic fixture database so the row counts reflect an
+    actual pipeline run instead of whatever state a local database happens to be
+    left in.
+    """
+    print("\n=== Testing Database Tables ===")
+    db_path = pipeline_db.db_path
+    assert os.path.exists(db_path), f"Database not found at {db_path}"
+
+    engine = create_engine(f"sqlite:///{db_path}")
     with engine.connect() as conn:
         tables = conn.execute(
             text("SELECT name FROM sqlite_master WHERE type='table'")
@@ -225,10 +240,15 @@ def test_inventory_intelligence():
     print("  [PASS] Valid overstock risk values")
 
 
-def test_anomaly_detection():
-    """Test anomaly detection outputs."""
+def test_anomaly_detection(pipeline_db):
+    """Test anomaly detection outputs.
+
+    Uses the fixture pipeline run, so both the CSV output and the
+    ``anomaly_flags`` rows come from the same deterministic execution of
+    ``src/anomaly/anomaly_detection.py``.
+    """
     print("\n=== Testing Anomaly Detection ===")
-    anomalies_path = os.path.join(PROCESSED_DIR, "anomalies.csv")
+    anomalies_path = os.path.join(pipeline_db.processed_dir, "anomalies.csv")
     assert os.path.exists(anomalies_path), f"Anomalies file missing: {anomalies_path}"
 
     df = pd.read_csv(anomalies_path, parse_dates=["date"])
@@ -243,11 +263,15 @@ def test_anomaly_detection():
     assert df["anomaly_type"].isin(valid_types).all(), "Invalid anomaly types"
     print("  [PASS] Valid anomaly types")
 
-    assert os.path.exists(DB_PATH), f"Database not found at {DB_PATH}"
-    engine = create_engine(f"sqlite:///{DB_PATH}")
+    db_path = pipeline_db.db_path
+    assert os.path.exists(db_path), f"Database not found at {db_path}"
+    engine = create_engine(f"sqlite:///{db_path}")
     with engine.connect() as conn:
         count = conn.execute(text("SELECT COUNT(*) FROM anomaly_flags")).fetchone()[0]
         assert count > 0, f"No anomaly flags in database (count: {count})"
+        assert count == len(df), (
+            f"anomaly_flags rows ({count}) do not match anomalies.csv ({len(df)})"
+        )
         print(f"  [PASS] Anomaly flags in DB: {count}")
 
 
@@ -359,42 +383,55 @@ def run_all_tests():
     """Run all tests using the custom runner (for backward compatibility).
 
     Wraps each test function in a try/except to report pass/fail
-    the same way the original TestResults-based runner did.
+    the same way the original TestResults-based runner did. The database-backed
+    tests need the same deterministic fixture pytest builds, so it is created
+    here in a throwaway temporary directory.
     """
     print("=" * 60)
     print("RETAILSYNC AI - TEST SUITE")
     print("=" * 60)
 
-    test_funcs = [
-        ("test_data_files_exist", test_data_files_exist),
-        ("test_database_tables", test_database_tables),
-        ("test_feature_engineering", test_feature_engineering),
-        ("test_forecasting", test_forecasting),
-        ("test_inventory_intelligence", test_inventory_intelligence),
-        ("test_anomaly_detection", test_anomaly_detection),
-        ("test_clustering", test_clustering),
-        ("test_pipeline_integration", test_pipeline_integration),
-        ("test_dashboard_artifacts", test_dashboard_artifacts),
-    ]
+    sys.path.insert(0, PROJECT_ROOT)
+    from tests.conftest import build_pipeline_database
 
-    passed = 0
-    failed = 0
-    errors = []
+    # SQLite connection pools keep the fixture database file open on Windows, so
+    # the temporary directory is removed best-effort instead of strictly.
+    tmp_dir = tempfile.mkdtemp(prefix="retailsync_tests_")
+    try:
+        pipeline_db = build_pipeline_database(Path(tmp_dir))
 
-    for func_name, func in test_funcs:
-        try:
-            func()
-            passed += 1
-        except (
-            AssertionError,
-            RuntimeError,
-            ValueError,
-            KeyError,
-            AttributeError,
-        ) as e:
-            failed += 1
-            errors.append(f"{func_name}: ERROR - {e}")
-            print(f"  [ERROR] {func_name}: {e}")
+        test_funcs = [
+            ("test_data_files_exist", test_data_files_exist),
+            ("test_database_tables", lambda: test_database_tables(pipeline_db)),
+            ("test_feature_engineering", test_feature_engineering),
+            ("test_forecasting", test_forecasting),
+            ("test_inventory_intelligence", test_inventory_intelligence),
+            ("test_anomaly_detection", lambda: test_anomaly_detection(pipeline_db)),
+            ("test_clustering", test_clustering),
+            ("test_pipeline_integration", test_pipeline_integration),
+            ("test_dashboard_artifacts", test_dashboard_artifacts),
+        ]
+
+        passed = 0
+        failed = 0
+        errors = []
+
+        for func_name, func in test_funcs:
+            try:
+                func()
+                passed += 1
+            except (
+                AssertionError,
+                RuntimeError,
+                ValueError,
+                KeyError,
+                AttributeError,
+            ) as e:
+                failed += 1
+                errors.append(f"{func_name}: ERROR - {e}")
+                print(f"  [ERROR] {func_name}: {e}")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
     total = passed + failed
     print(f"\n{'=' * 60}")
