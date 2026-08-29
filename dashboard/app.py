@@ -3,7 +3,7 @@
 from pathlib import Path
 import sys
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
@@ -38,13 +38,15 @@ from src.utils.logging import setup_logging  # noqa: E402
 @st.cache_data(ttl=600)
 def load_data():
     """Load all processed data and models into memory."""
-    _PROJECT_ROOT = Path(__file__).resolve().parents[1]
+    # Resolve project root from dashboard app.py location
+    dashboard_dir = Path(__file__).resolve().parent
+    project_root = dashboard_dir.parent
 
     # Load data CSVs - try multiple possible locations
     csv_dirs = [
-        _PROJECT_ROOT / "data" / "processed",
+        project_root / "data" / "processed",
+        dashboard_dir.parent.parent / "data" / "processed",
         Path("data/processed"),
-        Path(__file__).resolve().parent.parent / "data" / "processed",
     ]
 
     data = {}
@@ -74,9 +76,9 @@ def load_data():
 
     # Load ML models - try multiple possible locations
     models_dirs = [
-        _PROJECT_ROOT / "models",
+        project_root / "models",
+        dashboard_dir.parent.parent / "models",
         Path("models"),
-        Path(__file__).resolve().parent.parent / "models",
     ]
 
     models = {}
