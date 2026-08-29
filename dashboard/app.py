@@ -35,6 +35,54 @@ from src.health import get_health_status  # noqa: E402
 from src.utils.logging import setup_logging  # noqa: E402
 
 
+@st.cache_data(ttl=600)
+def load_data():
+    """Load all processed data and models into memory."""
+    _PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+    # Load data CSVs
+    data = {
+        "features": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "features_daily.csv", parse_dates=["date"]),
+        "forecasts": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "forecasts_next_14d.csv", parse_dates=["date"]),
+        "inv_intel": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "inventory_intelligence.csv"),
+        "anomalies": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "anomalies.csv", parse_dates=["date"]),
+        "wh_opt": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouse_optimization.csv"),
+        "product_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "product_segments.csv"),
+        "store_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "store_segments.csv"),
+        "warehouse_segments": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouse_segments.csv"),
+        "products": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "products.csv"),
+        "stores": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "stores.csv"),
+        "suppliers": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "suppliers.csv"),
+        "warehouses": pd.read_csv(_PROJECT_ROOT / "data" / "processed" / "warehouses.csv"),
+    }
+
+    # Load ML models
+    models = {
+        "demand_forecaster": joblib.load(str(_PROJECT_ROOT / "models" / "demand_forecaster.pkl")),
+        "product_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "product_clusterer.pkl")),
+        "store_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "store_clusterer.pkl")),
+        "warehouse_clusterer": joblib.load(str(_PROJECT_ROOT / "models" / "warehouse_clusterer.pkl")),
+    }
+
+    # Create database engine
+    engine = create_engine(f"sqlite:///{_PROJECT_ROOT / 'database' / 'retailsync.db'}")
+
+    return data, models, engine
+
+
+# Initialize session state for data/models/engine
+if "data" not in st.session_state:
+    st.session_state.data = load_data()[0]
+if "models" not in st.session_state:
+    st.session_state.models = load_data()[1]
+if "engine" not in st.session_state:
+    st.session_state.engine = load_data()[2]
+
+# Initialize session state for current page
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Overview"
+
+
 logger = setup_logging(__name__)
 
 st.set_page_config(
@@ -136,28 +184,32 @@ if st.session_state.get("show_health_details", False):
 render_sidebar_footer()
 
 # Main page routing using current_page session state
+data = st.session_state.data
+models = st.session_state.models
+engine = st.session_state.engine
+
 if st.session_state.current_page == "Overview":
-    render_overview_page()
+    render_overview_page(data, models, engine)
 elif st.session_state.current_page == "Demand Forecast":
-    render_demand_forecast_page()
+    render_demand_forecast_page(data, models)
 elif st.session_state.current_page == "Inventory Intelligence":
-    render_inventory_page()
+    render_inventory_page(data, engine)
 elif st.session_state.current_page == "Demand Anomalies":
-    render_anomalies_page()
+    render_anomalies_page(data)
 elif st.session_state.current_page == "Segmentation":
-    render_segmentation_page()
+    render_segmentation_page(data)
 elif st.session_state.current_page == "Warehouse Intelligence":
-    render_warehouse_page()
+    render_warehouse_page(data)
 elif st.session_state.current_page == "Model Performance":
-    render_model_performance_page()
+    render_model_performance_page(data, models)
 elif st.session_state.current_page == "Model Explainability":
-    render_explainability_page()
+    render_explainability_page(models, data)
 elif st.session_state.current_page == "Business Intelligence":
-    render_business_intelligence_page()
+    render_business_intelligence_page(engine, data, models)
 elif st.session_state.current_page == "AI Analyst":
-    render_ai_analyst_page()
+    render_ai_analyst_page(data)
 elif st.session_state.current_page == "Data Explorer":
-    render_data_explorer_page()
+    render_data_explorer_page(data)
 elif st.session_state.current_page == "Health Check":
     # Render health check page in main area
     st.title("System Health")
@@ -183,4 +235,4 @@ elif st.session_state.current_page == "Health Check":
             st.caption(f"Error: {details['error']}")
 else:
     # Fallback to Overview if somehow current_page is not set (should not happen)
-    render_overview_page()
+    render_overview_page(data, models, engine)
