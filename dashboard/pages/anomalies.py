@@ -99,7 +99,7 @@ def render_anomalies_page(data: dict) -> None:
                 xaxis_title="Date",
                 yaxis_title="Anomaly Count",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state("No Timeline Data", "No date information available for anomalies.")
     else:
@@ -134,7 +134,7 @@ def render_anomalies_page(data: dict) -> None:
                 xaxis_title="Anomaly Count",
                 yaxis_title="Product ID",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state("No Data", "No product-level anomaly data available.")
     else:

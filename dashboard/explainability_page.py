@@ -162,7 +162,7 @@ def _render_global(engine: ExplainabilityEngine, features: pd.DataFrame) -> None
     top = global_exp.top(10)
     c1, c2 = st.columns([3, 1])
     with c1:
-        st.plotly_chart(global_importance_chart(global_exp, top_n=20), use_container_width=True)
+        st.plotly_chart(global_importance_chart(global_exp, top_n=20), width="stretch")
     with c2:
         st.markdown("**Top drivers**")
         for _, r in top.iterrows():
@@ -179,7 +179,7 @@ def _render_global(engine: ExplainabilityEngine, features: pd.DataFrame) -> None
                 _SHAP_SUMMARY_CACHE[cache_key] = (vals, engine._get_background_sample())
             vals, bg = _SHAP_SUMMARY_CACHE[cache_key]
             fig = shap_summary_chart(global_exp, vals, bg, max_features=15, sample=200)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         except Exception as exc:
             render_alert(
                 message=f"Could not render SHAP summary: {exc}",
@@ -244,10 +244,10 @@ def _render_local(engine: ExplainabilityEngine, features: pd.DataFrame) -> None:
                 icon="⚡",
             )
 
-        st.plotly_chart(local_waterfall_chart(local), use_container_width=True)
+        st.plotly_chart(local_waterfall_chart(local), width="stretch")
 
         render_section_header("Top Positive & Negative Drivers", subtitle="Features that increased or decreased the forecast")
-        st.plotly_chart(driver_bars_chart(local), use_container_width=True)
+        st.plotly_chart(driver_bars_chart(local), width="stretch")
 
         cpos, cneg = st.columns(2)
         with cpos:
@@ -313,4 +313,4 @@ def render_why_forecast(models: dict, data: dict, product: str, store: str) -> N
     render_alert(message=text, severity="info", title="Forecast Explanation")
 
     with st.expander("See the top drivers"):
-        st.plotly_chart(driver_bars_chart(local), use_container_width=True)
+        st.plotly_chart(driver_bars_chart(local), width="stretch")

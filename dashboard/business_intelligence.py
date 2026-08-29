@@ -85,7 +85,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
             ),
             key="bi_dates",
         )
-        st.form_submit_button("Apply Filters", use_container_width=True)
+        st.form_submit_button("Apply Filters", width="stretch")
 
     products_filtered = _apply_filters(
         products, selected_product, selected_category, None, None, None
@@ -213,7 +213,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
                 ["product_id", "mae", "rmse", "smape", "samples"]
             ].copy()
             display.columns = ["Product", "MAE", "RMSE", "sMAPE %", "Samples"]
-            st.dataframe(display, use_container_width=True)
+            st.dataframe(display, width="stretch")
 
     with col3:
         by_store = forecast_accuracy.get("by_store")
@@ -223,7 +223,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
                 ["store_id", "mae", "rmse", "smape", "samples"]
             ].copy()
             display.columns = ["Store", "MAE", "RMSE", "sMAPE %", "Samples"]
-            st.dataframe(display, use_container_width=True)
+            st.dataframe(display, width="stretch")
 
     by_category = forecast_accuracy.get("by_category")
     if by_category is not None and not by_category.empty:
@@ -240,7 +240,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
             xaxis_title="Category",
             yaxis_title="MAE",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
@@ -301,7 +301,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
             xaxis_title="Product ID",
             yaxis_title="Stockout Cost ($)",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
@@ -360,7 +360,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
             xaxis_title="Product ID",
             yaxis_title="Overstock Value ($)",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
@@ -430,7 +430,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
                 "NORMAL": COLORS["success"],
             },
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     else:
         render_alert(
             message="No reorder recommendations available for the current filters.",
@@ -472,7 +472,7 @@ def render_business_intelligence_page(engine, data: dict, models: dict):
             yaxis_title="Inventory Value ($)",
             showlegend=False,
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
         render_data_table(
             cat_summary,

@@ -150,7 +150,7 @@ page = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 
-if st.sidebar.button("🔍 Health Check", use_container_width=True):
+if st.sidebar.button("🔍 Health Check", width="stretch"):
     health = get_health_status()
     st.session_state["health_status"] = health
 

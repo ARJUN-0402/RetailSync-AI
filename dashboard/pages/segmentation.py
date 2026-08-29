@@ -83,7 +83,7 @@ def render_product_segmentation(df: pd.DataFrame | None, products: pd.DataFrame 
                 xaxis_title="Total Quantity Sold",
                 yaxis_title="Demand CV (28d Mean)",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state("No Metrics", "Required columns missing for scatter plot.")
 
@@ -130,7 +130,7 @@ def render_store_segmentation(df: pd.DataFrame | None, stores: pd.DataFrame | No
                 yaxis_title="Total Revenue",
                 showlegend=False,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state("No Metrics", "Required data missing for bar chart.")
 
@@ -177,7 +177,7 @@ def render_warehouse_segmentation(df: pd.DataFrame | None, warehouses: pd.DataFr
                 yaxis_title="Total Revenue",
                 showlegend=False,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state("No Metrics", "Required data missing for bar chart.")
 

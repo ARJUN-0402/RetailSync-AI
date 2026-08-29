@@ -525,7 +525,7 @@ def render_line_chart(
         height=height,
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_bar_chart(
@@ -569,7 +569,7 @@ def render_bar_chart(
         xaxis_title=x.replace("_", " ").title(),
         yaxis_title=y.replace("_", " ").title(),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_pie_chart(
@@ -604,7 +604,7 @@ def render_pie_chart(
         height=height,
     )
     fig.update_traces(textposition="inside", textinfo="percent+label")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_scatter_chart(
@@ -648,7 +648,7 @@ def render_scatter_chart(
         xaxis_title=x.replace("_", " ").title(),
         yaxis_title=y.replace("_", " ").title(),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 # ============================================================

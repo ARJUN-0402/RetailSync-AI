@@ -56,7 +56,7 @@ def render_inventory_page(data: dict, engine) -> None:
         selected_category = st.selectbox("Category", ["All"] + category_options, key="inv_category")
         selected_store = st.selectbox("Store", ["All"] + store_options, key="inv_store")
         selected_warehouse = st.selectbox("Warehouse", ["All"] + warehouse_options, key="inv_warehouse")
-        st.form_submit_button("Apply Filters", use_container_width=True)
+        st.form_submit_button("Apply Filters", width="stretch")
 
     filters = {
         "product": selected_product if selected_product != "All" else None,
@@ -282,7 +282,7 @@ def render_inventory_page(data: dict, engine) -> None:
                         "NORMAL": COLORS["success"],
                     },
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
         else:
             render_alert(
                 message="No reorder recommendations available for the current filters.",

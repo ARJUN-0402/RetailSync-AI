@@ -76,7 +76,7 @@ def render_ai_analyst_page(data: dict) -> None:
     cols = st.columns(2)
     for idx, question in enumerate(SUGGESTED_QUESTIONS):
         with cols[idx % 2]:
-            if st.button(question, key=f"suggest_{idx}", use_container_width=True):
+            if st.button(question, key=f"suggest_{idx}", width="stretch"):
                 st.session_state.chat_history.append({"role": "user", "content": question})
                 with st.spinner("Analyzing..."):
                     response = ask(question, config=config)

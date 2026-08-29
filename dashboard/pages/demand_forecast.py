@@ -106,7 +106,7 @@ def render_demand_forecast_page(data: dict, models: dict) -> None:
         height=400,
         hovermode="x unified",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # Forecast stats
     total_demand = float(forecast_filtered["forecast_demand"].sum())
@@ -182,7 +182,7 @@ def render_demand_forecast_page(data: dict, models: dict) -> None:
                 height=400,
                 hovermode="x unified",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             render_empty_state(
                 title="No Historical Data",

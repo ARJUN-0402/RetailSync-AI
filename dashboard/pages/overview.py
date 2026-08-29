@@ -376,7 +376,7 @@ def render_overview_page(data: dict, models: dict, engine) -> None:
             if st.button(
                 f"{icon} {label}",
                 key=f"nav_{idx}",
-                use_container_width=True,
+                width="stretch",
             ):
                 st.session_state["nav_page"] = page_name
                 st.rerun()

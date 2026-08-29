@@ -134,7 +134,7 @@ def render_model_performance_page(data: dict, models: dict) -> None:
                     color="MAE",
                     height=400,
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             # By store
             by_store = forecast_accuracy.get("by_store")
@@ -158,7 +158,7 @@ def render_model_performance_page(data: dict, models: dict) -> None:
                     color="MAE",
                     height=400,
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
             # By category
             by_category = forecast_accuracy.get("by_category")
@@ -177,7 +177,7 @@ def render_model_performance_page(data: dict, models: dict) -> None:
                     xaxis_title="Category",
                     yaxis_title="MAE",
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
                 render_data_table(
                     by_category,
@@ -257,7 +257,7 @@ def render_model_performance_page(data: dict, models: dict) -> None:
 
                 st.plotly_chart(
                     global_importance_chart(global_exp, top_n=20),
-                    use_container_width=True,
+                    width="stretch",
                 )
 
                 top = global_exp.top(10)

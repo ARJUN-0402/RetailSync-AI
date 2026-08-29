@@ -93,7 +93,7 @@ def render_warehouse_page(data: dict) -> None:
         yaxis_title="Utilization %",
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
@@ -136,4 +136,4 @@ def render_warehouse_page(data: dict) -> None:
                 template="plotly_dark",
                 height=400,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
