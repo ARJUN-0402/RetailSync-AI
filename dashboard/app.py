@@ -7,18 +7,18 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-import os  # noqa: E402
+import os  # noqa: E402, F401
 
-import joblib  # noqa: E402
-import pandas as pd  # noqa: E402
+import joblib  # noqa: E402, F401
+import pandas as pd  # noqa: E402, F401
 import streamlit as st  # noqa: E402
-from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402, F401
 
 from dashboard.business_intelligence import render_business_intelligence_page  # noqa: E402
 from dashboard.components.ui import (  # noqa: E402
-    inject_global_css,  # noqa: E402
-    render_sidebar_branding,  # noqa: E402
-    render_sidebar_footer,  # noqa: E402
+    inject_global_css, 
+    render_sidebar_branding, 
+    render_sidebar_footer,
 )  # noqa: E402
 from dashboard.explainability_page import render_explainability_page  # noqa: E402
 from dashboard.pages.anomalies import render_anomalies_page  # noqa: E402
@@ -30,251 +30,157 @@ from dashboard.pages.model_performance import render_model_performance_page  # n
 from dashboard.pages.overview import render_overview_page  # noqa: E402
 from dashboard.pages.segmentation import render_segmentation_page  # noqa: E402
 from dashboard.pages.warehouse import render_warehouse_page  # noqa: E402
-from src.config import settings  # noqa: E402
+from src.config import settings  # noqa: E402, F401
 from src.health import get_health_status  # noqa: E402
 from src.utils.logging import setup_logging  # noqa: E402
-
 
 
 logger = setup_logging(__name__)
 
 st.set_page_config(
     page_title="RetailSync AI",
-    page_icon="🏪",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 inject_global_css()
 
-def check_required_artifacts():
-    import sqlite3
-    errors = []
-    # Check database file
-    db_path = os.path.join(str(_PROJECT_ROOT), settings.database.path)
-    if not os.path.exists(db_path):
-        errors.append(f"Database file not found: {db_path}")
-    else:
-        # Check required tables
-        try:
-            conn = sqlite3.connect(db_path)
-            c = conn.cursor()
-            c.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = {r[0] for r in c.fetchall()}
-            conn.close()
-            required_tables = {'products', 'stores', 'suppliers', 'warehouses', 'sales', 'inventory', 'inventory_alerts', 'anomaly_flags'}
-            missing = required_tables - tables
-            if missing:
-                errors.append(f"Missing tables in database: {missing}")
-        except Exception as e:
-            errors.append(f"Failed to check database tables: {e}")
-    # Check model files
-    model_files = [
-        "models/demand_forecaster.pkl",
-        "models/product_clusterer.pkl",
-        "models/store_clusterer.pkl",
-        "models/warehouse_clusterer.pkl"
-    ]
-    for mf in model_files:
-        mf_path = os.path.join(str(_PROJECT_ROOT), mf)
-        if not os.path.exists(mf_path):
-            errors.append(f"Model file not found: {mf}")
-    # Check CSV files
-    csv_files = [
-        "data/processed/anomalies.csv",
-        "data/processed/features_daily.csv",
-        "data/processed/forecasts_next_14d.csv",
-        "data/processed/inventory_intelligence.csv",
-        "data/processed/product_segments.csv",
-        "data/processed/store_segments.csv",
-        "data/processed/warehouse_segments.csv",
-        "data/processed/warehouse_optimization.csv"
-    ]
-    for cf in csv_files:
-        cf_path = os.path.join(str(_PROJECT_ROOT), cf)
-        if not os.path.exists(cf_path):
-            errors.append(f"CSV file not found: {cf}")
-    return errors
-# Validate required artifacts before loading models and data
-artifact_errors = check_required_artifacts()
-if artifact_errors:
-    st.error("Deployment configuration error: The following required artifacts are missing or invalid:")
-    for error in artifact_errors:
-        st.error(error)
-    st.stop()
+# Initialize session state for current page
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Overview"
 
-@st.cache_resource
-def load_models():
-    models = {}
-    model_files = {
-        "demand_forecaster": "models/demand_forecaster.pkl",
-        "product_clusterer": "models/product_clusterer.pkl",
-        "store_clusterer": "models/store_clusterer.pkl",
-        "warehouse_clusterer": "models/warehouse_clusterer.pkl",
-    }
-    for name, path in model_files.items():
-        full_path = os.path.join(str(_PROJECT_ROOT), path)
-        if os.path.exists(full_path):
-            try:
-                models[name] = joblib.load(full_path)
-            except Exception as exc:
-                logger.warning("Could not load model %s: %s", name, exc)
-                st.warning(f"Could not load model {name}: {exc}")
-    return models
+# load_data
 
-
-models = load_models()
-
-
-@st.cache_resource
-def get_engine():
-    db_path = os.path.join(str(_PROJECT_ROOT), settings.database.path)
-    return create_engine(f"sqlite:///{db_path}")
-
-
-engine = get_engine()
-
-
-@st.cache_data(ttl=300)
-def load_data():
-    data = {}
-    csv_files = {
-        "features": ("data/processed/features_daily.csv", {"parse_dates": ["date"]}),
-        "forecasts": ("data/processed/forecasts_next_14d.csv", {"parse_dates": ["date"]}),
-        "inv_intel": ("data/processed/inventory_intelligence.csv", {}),
-        "anomalies": ("data/processed/anomalies.csv", {"parse_dates": ["date"]}),
-        "product_segments": ("data/processed/product_segments.csv", {}),
-        "store_segments": ("data/processed/store_segments.csv", {}),
-        "warehouse_segments": ("data/processed/warehouse_segments.csv", {}),
-        "wh_opt": ("data/processed/warehouse_optimization.csv", {}),
-    }
-    for name, (path, kwargs) in csv_files.items():
-        full_path = os.path.join(str(_PROJECT_ROOT), path)
-        if os.path.exists(full_path):
-            try:
-                data[name] = pd.read_csv(full_path, **kwargs)
-            except Exception as exc:
-                logger.warning("Could not load %s: %s", path, exc)
-                st.warning(f"Could not load {path}: {exc}")
-        else:
-            data[name] = pd.DataFrame()
-
-    db_queries = {
-        "products": "SELECT product_id, product_name, category, subcategory, unit_price, cost_price, supplier_id FROM products",
-        "stores": "SELECT store_id, store_name, city, state, store_type FROM stores",
-        "suppliers": "SELECT supplier_id, supplier_name, country, lead_time_days, reliability_score FROM suppliers",
-        "warehouses": "SELECT warehouse_id, warehouse_name, city, state, capacity_m3, supplier_id FROM warehouses",
-        "sales": "SELECT date, product_id, store_id, quantity_sold, unit_price, revenue FROM sales",
-        "inventory": "SELECT date, product_id, store_id, quantity_on_hand, reorder_point, max_stock_level, warehouse_id FROM inventory",
-        "inventory_alerts": "SELECT * FROM inventory_alerts",
-        "anomaly_flags": "SELECT * FROM anomaly_flags",
-    }
-    for name, query in db_queries.items():
-        try:
-            data[name] = pd.read_sql(query, engine)
-        except Exception as exc:
-            logger.warning("Could not load %s from database: %s", name, exc)
-            st.warning(f"Could not load {name} from database: {exc}")
-            data[name] = pd.DataFrame()
-
-    if "date" in data.get("sales", pd.DataFrame()).columns:
-        data["sales"]["date"] = pd.to_datetime(data["sales"]["date"])
-    if "date" in data.get("inventory", pd.DataFrame()).columns:
-        data["inventory"]["date"] = pd.to_datetime(data["inventory"]["date"])
-
-    return data
-
-
-with st.spinner("Loading data..."):
-    data = load_data()
-
+# Sidebar navigation
 render_sidebar_branding()
 
-st.sidebar.markdown("---")
-
-page = st.sidebar.selectbox(
-    "Navigation",
-    [
-        "📊 Executive Overview",
-        "📈 Business Intelligence",
-        "🔮 Demand Forecast",
-        "📦 Inventory Intelligence",
-        "⚠️ Demand Anomalies",
-        "🎯 Segmentation",
-        "🏭 Warehouse Intelligence",
-        "📊 Model Performance",
-        "🧠 Model Explainability",
-        "🤖 AI Analyst",
-        "📁 Data Explorer",
+# Define navigation structure
+NAVIGATION = {
+    "Overview": ["Overview"],
+    "ANALYTICS": [
+        "Demand Forecast",
+        "Inventory Intelligence",
+        "Demand Anomalies",
+        "Segmentation",
+        "Warehouse Intelligence"
     ],
-    key="main_navigation",
-)
+    "INTELLIGENCE": [
+        "Model Performance",
+        "Model Explainability",
+        "Business Intelligence",
+        "AI Analyst"
+    ],
+    "DATA": [
+        "Data Explorer"
+    ],
+    "SYSTEM": [
+        "Health Check"
+    ]
+}
 
-st.sidebar.markdown("---")
-
-if st.sidebar.button("🔍 Health Check", width="stretch"):
-    health = get_health_status()
-    st.session_state["health_status"] = health
-
-if "health_status" in st.session_state:
-    health = st.session_state["health_status"]
-    with st.sidebar.expander("System Health", expanded=True):
-        status_color = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}.get(health["status"], "⚪")
-        st.markdown(f"**{status_color} {health['status'].upper()}**")
-        st.markdown(f"App: {health['app']} v{health['version']}")
-        st.markdown(f"Env: {health['environment']}")
-        for component, details in health.get("components", {}).items():
-            comp_status = details.get("status", "unknown")
-            comp_icon = {"healthy": "🟢", "degraded": "🟡", "unhealthy": "🔴"}.get(comp_status, "⚪")
-            st.markdown(f"{comp_icon} {component}: {comp_status}")
-            if details.get("error"):
-                st.caption(f"Error: {details['error']}")
-        if st.button("Close Health Check"):
-            del st.session_state["health_status"]
+# Render navigation buttons grouped by section
+for group, pages in NAVIGATION.items():
+    st.sidebar.markdown(f"### {group}")
+    for page in pages:
+        # Determine button type: primary for current page, secondary otherwise
+        button_type = "primary" if st.session_state.current_page == page else "secondary"
+        if st.sidebar.button(
+            page, 
+            use_container_width=True, 
+            type=button_type,
+            key=f"nav_{page}"  # Unique key to avoid conflicts
+        ):
+            st.session_state.current_page = page
             st.rerun()
 
 st.sidebar.markdown("---")
 
-st.sidebar.markdown("### Technology Stack")
-st.sidebar.markdown("- Python")
-st.sidebar.markdown("- Pandas / NumPy")
-st.sidebar.markdown("- Scikit-learn / XGBoost")
-st.sidebar.markdown("- Plotly")
-st.sidebar.markdown("- Streamlit")
-st.sidebar.markdown("- SQLite")
-st.sidebar.markdown("- SHAP")
+# System status indicator (compact) - using simple text icons
+health_status = get_health_status()
+if health_status["status"] == "healthy":
+    status_text = "✓ System Healthy"
+elif health_status["status"] == "degraded":
+    status_text = "! System Degraded"
+else:
+    status_text = "✗ System Unhealthy"
+if st.sidebar.button(status_text, help="Click to see detailed health status"):
+    st.session_state.show_health_details = not st.session_state.get("show_health_details", False)
+
+if st.session_state.get("show_health_details", False):
+    with st.sidebar.expander("System Health Details", expanded=True):
+        health = get_health_status()
+        if health["status"] == "healthy":
+            status_display = "✓ Healthy"
+        elif health["status"] == "degraded":
+            status_display = "! Degraded"
+        else:
+            status_display = "✗ Unhealthy"
+        st.markdown(f"**{status_display}**")
+        st.markdown(f"App: {health['app']} v{health['version']}")
+        st.markdown(f"Env: {health['environment']}")
+        for component, details in health.get("components", {}).items():
+            if details["status"] == "healthy":
+                comp_display = "✓"
+            elif details["status"] == "degraded":
+                comp_display = "!"
+            else:
+                comp_display = "✗"
+            st.markdown(f"{comp_display} {component}: {details['status']}")
+            if details.get("error"):
+                st.caption(f"Error: {details['error']}")
+        if st.button("Close Health Check"):
+            st.session_state.show_health_details = False
+            st.rerun()
 
 render_sidebar_footer()
 
-if "nav_page" in st.session_state:
-    page = st.session_state["nav_page"]
-    del st.session_state["nav_page"]
-
-try:
-    if page == "📊 Executive Overview":
-        render_overview_page(data, models, engine)
-    elif page == "📈 Business Intelligence":
-        render_business_intelligence_page(engine, data, models)
-    elif page == "🔮 Demand Forecast":
-        render_demand_forecast_page(data, models)
-    elif page == "📦 Inventory Intelligence":
-        render_inventory_page(data, engine)
-    elif page == "⚠️ Demand Anomalies":
-        render_anomalies_page(data)
-    elif page == "🎯 Segmentation":
-        render_segmentation_page(data)
-    elif page == "🏭 Warehouse Intelligence":
-        render_warehouse_page(data)
-    elif page == "📊 Model Performance":
-        render_model_performance_page(data, models)
-    elif page == "🧠 Model Explainability":
-        render_explainability_page(models, data)
-    elif page == "🤖 AI Analyst":
-        render_ai_analyst_page(data)
-    elif page == "📁 Data Explorer":
-        render_data_explorer_page(data)
-except Exception as exc:
-    logger.error("Dashboard page error: %s", exc, exc_info=True)
-    st.error(f"An unexpected error occurred: {exc}")
-
-
+# Main page routing using current_page session state
+if st.session_state.current_page == "Overview":
+    render_overview_page()
+elif st.session_state.current_page == "Demand Forecast":
+    render_demand_forecast_page()
+elif st.session_state.current_page == "Inventory Intelligence":
+    render_inventory_page()
+elif st.session_state.current_page == "Demand Anomalies":
+    render_anomalies_page()
+elif st.session_state.current_page == "Segmentation":
+    render_segmentation_page()
+elif st.session_state.current_page == "Warehouse Intelligence":
+    render_warehouse_page()
+elif st.session_state.current_page == "Model Performance":
+    render_model_performance_page()
+elif st.session_state.current_page == "Model Explainability":
+    render_explainability_page()
+elif st.session_state.current_page == "Business Intelligence":
+    render_business_intelligence_page()
+elif st.session_state.current_page == "AI Analyst":
+    render_ai_analyst_page()
+elif st.session_state.current_page == "Data Explorer":
+    render_data_explorer_page()
+elif st.session_state.current_page == "Health Check":
+    # Render health check page in main area
+    st.title("System Health")
+    health = get_health_status()
+    if health["status"] == "healthy":
+        status_display = "✓ Healthy"
+    elif health["status"] == "degraded":
+        status_display = "! Degraded"
+    else:
+        status_display = "✗ Unhealthy"
+    st.markdown(f"**{status_display}**")
+    st.markdown(f"App: {health['app']} v{health['version']}")
+    st.markdown(f"Env: {health['environment']}")
+    for component, details in health.get("components", {}).items():
+        if details["status"] == "healthy":
+            comp_display = "✓"
+        elif details["status"] == "degraded":
+            comp_display = "!"
+        else:
+            comp_display = "✗"
+        st.markdown(f"{comp_display} {component}: {details['status']}")
+        if details.get("error"):
+            st.caption(f"Error: {details['error']}")
+else:
+    # Fallback to Overview if somehow current_page is not set (should not happen)
+    render_overview_page()
