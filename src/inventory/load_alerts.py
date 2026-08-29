@@ -27,11 +27,25 @@ def load() -> None:
     alert_date = pd.to_datetime(alerts_df["date"].max()).strftime("%Y-%m-%d")
     logger.info("Alert date: %s", alert_date)
 
-    db_path = os.path.join(str(settings.paths.database), "retailsync.db")
+    db_path = settings.database.path
     engine = create_engine(f"sqlite:///{db_path}")
 
     with engine.connect() as conn:
-        conn.execute(text("DELETE FROM inventory_alerts WHERE alert_date = :date"), {"date": alert_date})
+        existing = {
+            row[0]
+            for row in conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
+        }
+        if "inventory_alerts" not in existing:
+            raise RuntimeError(
+                "inventory_alerts table is missing; run database initialization "
+                "(src/database/init_db.py) before loading alerts"
+            )
+        conn.execute(
+            text("DELETE FROM inventory_alerts WHERE alert_date = :date"),
+            {"date": alert_date},
+        )
         conn.commit()
 
     alert_types = []

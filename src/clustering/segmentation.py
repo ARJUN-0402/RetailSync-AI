@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from src.config import settings
 from src.exceptions import DataError, ModelError, PipelineError
@@ -118,6 +118,7 @@ def segment_products(features_df: pd.DataFrame) -> pd.DataFrame:
         model_path,
     )
     logger.info("Saved product clusterer to %s", model_path)
+    _persist_segment("product_segments", product_features)
     return product_features
 
 
@@ -172,6 +173,7 @@ def segment_stores(features_df: pd.DataFrame) -> pd.DataFrame:
         model_path,
     )
     logger.info("Saved store clusterer to %s", model_path)
+    _persist_segment("store_segments", store_features)
     return store_features
 
 
@@ -181,8 +183,26 @@ def segment_warehouses(features_df: pd.DataFrame, inventory_df: pd.DataFrame) ->
 
     wh_features = inventory_df.groupby("warehouse_id").agg(
         total_quantity=("quantity_on_hand", "sum"),
-        avg_stock_coverage=("stock_coverage_days", "mean"),
     ).reset_index()
+
+    # stock_coverage_days is available from the features snapshot, not the raw
+    # inventory table, so derive it from the latest feature row per warehouse.
+    coverage_map = (
+        features_df.groupby(["product_id", "store_id"])["stock_coverage_days"]
+        .last()
+        .reset_index()
+    )
+    coverage_map = coverage_map.merge(
+        inventory_df[["product_id", "store_id", "warehouse_id"]],
+        on=["product_id", "store_id"],
+        how="right",
+    )
+    wh_features["avg_stock_coverage"] = (
+        coverage_map.groupby("warehouse_id")["stock_coverage_days"]
+        .mean()
+        .reindex(wh_features["warehouse_id"])
+        .values
+    )
 
     warehouse_capacity = pd.read_sql("SELECT * FROM warehouses", create_engine(f"sqlite:///{settings.database.path}"))
     wh_features = wh_features.merge(
@@ -198,7 +218,11 @@ def segment_warehouses(features_df: pd.DataFrame, inventory_df: pd.DataFrame) ->
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    best_k, _, silhouettes = find_optimal_k(X_scaled, k_range=range(2, 6))
+    # silhouette_score requires 2 <= n_clusters <= n_samples - 1; warehouses
+    # are few, so bound k to the available sample count.
+    best_k, _, silhouettes = find_optimal_k(
+        X_scaled, k_range=range(2, min(6, len(wh_features)))
+    )
     logger.info("Optimal K for warehouses: %d (silhouette=%.3f)", best_k, max(silhouettes))
 
     kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=10, max_iter=300)
@@ -229,7 +253,30 @@ def segment_warehouses(features_df: pd.DataFrame, inventory_df: pd.DataFrame) ->
         model_path,
     )
     logger.info("Saved warehouse clusterer to %s", model_path)
+
+    _persist_segment("warehouse_segments", wh_features)
     return wh_features
+
+
+def _persist_segment(table_name: str, df: pd.DataFrame) -> None:
+    """Write a segment dataframe into its analytics table in the database.
+
+    Schema ownership remains centralized (``database/schema.sql`` defines the
+    table); this only appends rows. A missing table is a schema problem and is
+    reported loudly rather than silently swallowed.
+    """
+    engine = create_engine(f"sqlite:///{settings.database.path}")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(f"DELETE FROM {table_name}"))
+            conn.commit()
+        df.to_sql(table_name, con=engine, if_exists="append", index=False)
+        logger.info("Persisted %d rows to %s", len(df), table_name)
+    except Exception as exc:
+        raise PipelineError(
+            f"Failed to persist {table_name}: {exc}. "
+            "Ensure database initialization (src/database/init_db.py) ran first."
+        ) from exc
 
 
 def main() -> None:

@@ -71,9 +71,8 @@ retailsync-ai/
 │   └── README.md
 ├──
 ├── database/
-│   ├── schema.sql                # Core schema (87 lines, 6 tables + 8 indexes)
+│   ├── schema.sql                # Canonical schema (all 12 tables + indexes)
 │   ├── queries.sql               # Analytical SQL queries (221 lines, 12 queries)
-│   ├── alerts_schema.sql         # Alerts + anomaly_flags tables (47 lines)
 │   └── retailsync.db             # SQLite database (12 tables)
 ├──
 ├── models/
@@ -139,7 +138,7 @@ All components listed below were verified by running the test suite and inspecti
 - **Warehouse "optimization"** — `warehouse_optimization.py` performs **descriptive analytics only** (capacity, occupancy, utilization %, rule-based recommendations). There is **no optimization algorithm** (no linear programming, no allocation solver, no constraint satisfaction). The term "optimization" is misleading. See Section 9.
 - **Forecast pipeline model persistence** — `demand_forecaster.py` saves a model package, but the model selection fallback logic is broken (Section 8). The `forecast_pipeline.py` assumes the saved model has a `.predict()` method, but baselines do not.
 - **Test integration with pytest** — The test functions are named `test_*` and the CI runs `pytest tests/`, but the tests take a `results` parameter that pytest interprets as a fixture. This causes all 9 tests to error under pytest. The tests only work via the custom `if __name__ == "__main__"` runner.
-- **Inventory alerts database table** — Created in code (`load_alerts.py`) using `alerts_schema.sql`, not in the main `schema.sql`. The table creation is split across two files.
+- **Inventory alerts database table** — Created by the canonical `schema.sql` (now the single source of truth), so `inventory_alerts` and `anomaly_flags` exist immediately after `init_db.py` runs and before `load_alerts.py` writes into them.
 
 ---
 
@@ -148,7 +147,7 @@ All components listed below were verified by running the test suite and inspecti
 - **`run_pipeline_audit.py`** (root) vs **`src/pipeline/run_pipeline.py`** — Near-identical content (328 vs 340 lines). Both perform the same pipeline validation and generate the same `docs/pipeline_summary.md`, `docs/pipeline_config.json`, and `docs/pipeline_insights.json`.
 - **`docs/testing.md`** vs **`docs/testing_report.md`** — Overlapping content (95 tests, same categories, similar structure).
 - **`docs/portfolio_highlights.md`** vs **`docs/portfolio_summary.md`** — Overlapping content (same metrics, same conclusions).
-- **Schema split** — Core tables in `schema.sql`, alerts/anomalies tables in `alerts_schema.sql`. Both are needed to create the full database.
+- **Schema split** — All tables (core and analytics: `inventory_alerts`, `anomaly_flags`, `product_segments`, `store_segments`, `warehouse_segments`, `warehouse_optimization`) live in the single canonical `schema.sql` and are created by `init_db.py`.
 - **Config duplication** — Pipeline configuration is hardcoded in `run_pipeline_audit.py`, `src/pipeline/run_pipeline.py`, and `docs/pipeline_config.json` with overlapping values.
 
 ---

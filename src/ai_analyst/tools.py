@@ -206,11 +206,29 @@ def get_sales_trends(product_id: str | None = None, store_id: str | None = None,
     }
 
 
+def _load_products() -> pd.DataFrame:
+    """Load product master data (used to enrich forecasts with category)."""
+    path = os.path.join(PROCESSED_DIR, "products.csv")
+    if not os.path.exists(path):
+        try:
+            return pd.read_sql("SELECT product_id, category FROM products", _get_engine())
+        except Exception:
+            return pd.DataFrame(columns=["product_id", "category"])
+    try:
+        return pd.read_csv(path)[["product_id", "category"]]
+    except Exception as exc:
+        logger.warning("Failed to load products: %s", exc)
+        return pd.DataFrame(columns=["product_id", "category"])
+
+
 def get_forecasts(product_id: str | None = None, store_id: str | None = None, category: str | None = None) -> dict[str, Any]:
     forecasts = _load_csv("forecasts_next_14d.csv")
     if forecasts.empty:
         return {"error": "Forecast data not available."}
     df = forecasts.copy()
+    products = _load_products()
+    if not products.empty and "category" not in df.columns:
+        df = df.merge(products, on="product_id", how="left")
     if product_id:
         df = df[df["product_id"] == product_id]
     if store_id:
@@ -219,8 +237,11 @@ def get_forecasts(product_id: str | None = None, store_id: str | None = None, ca
         df = df[df["category"] == category]
     if df.empty:
         return {"error": "No forecasts match the filters."}
+    group_cols = ["product_id", "store_id"]
+    if "category" in df.columns:
+        group_cols = group_cols + ["category"]
     agg = (
-        df.groupby(["product_id", "store_id", "category"])
+        df.groupby(group_cols)
         .agg(
             forecast_demand_14d=("forecast_demand", "sum"),
             forecast_revenue_14d=("forecast_revenue", "sum"),
@@ -386,7 +407,7 @@ def get_product_segments(cluster_label: str | None = None, product_id: str | Non
     if df.empty:
         return {"error": "Product segments not available."}
     if cluster_label:
-        df = df[df["product_cluster_label"] == cluster_label]
+        df = df[df["cluster_label"] == cluster_label]
     if product_id:
         df = df[df["product_id"] == product_id]
     if df.empty:
@@ -407,7 +428,7 @@ def get_store_segments(cluster_label: str | None = None, store_id: str | None = 
     if df.empty:
         return {"error": "Store segments not available."}
     if cluster_label:
-        df = df[df["store_cluster_label"] == cluster_label]
+        df = df[df["cluster_label"] == cluster_label]
     if store_id:
         df = df[df["store_id"] == store_id]
     if df.empty:
@@ -418,7 +439,7 @@ def get_store_segments(cluster_label: str | None = None, store_id: str | None = 
         "data": df[cols].to_dict(orient="records"),
         "summary": {
             "total_stores": len(df),
-            "labels": df["cluster_cluster_label"].value_counts().to_dict() if "cluster_label" in df.columns else {},
+            "labels": df["cluster_label"].value_counts().to_dict() if "cluster_label" in df.columns else {},
         },
     }
 

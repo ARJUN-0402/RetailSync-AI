@@ -22,6 +22,25 @@ TABLES = {
     "inventory": "inventory.csv",
 }
 
+# Analytics tables that must exist after schema initialization so downstream
+# pipeline stages (alerts, anomalies, segmentation, warehouse optimization)
+# can write into them. These are created by the canonical schema, not by
+# business logic.
+EXPECTED_TABLES = [
+    "products",
+    "stores",
+    "suppliers",
+    "warehouses",
+    "sales",
+    "inventory",
+    "inventory_alerts",
+    "anomaly_flags",
+    "product_segments",
+    "store_segments",
+    "warehouse_segments",
+    "warehouse_optimization",
+]
+
 
 def create_database(db_path: str | None = None) -> str:
     """Create the SQLite database schema.
@@ -49,7 +68,31 @@ def create_database(db_path: str | None = None) -> str:
             conn.execute(text(stmt))
         conn.commit()
     logger.info("Schema created successfully")
+    _verify_tables(engine)
     return f"sqlite:///{path}"
+
+
+def _verify_tables(engine) -> None:
+    """Ensure every expected analytics table was created by the schema.
+
+    Raises:
+        DatabaseError: If any expected table is missing, so a clean CI run
+            fails loudly instead of surfacing a confusing downstream error.
+    """
+    with engine.connect() as conn:
+        existing = {
+            row[0]
+            for row in conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
+        }
+    missing = [t for t in EXPECTED_TABLES if t not in existing]
+    if missing:
+        raise DatabaseError(
+            "Schema initialization incomplete; missing tables: "
+            + ", ".join(missing)
+        )
+    logger.info("Verified %d expected tables exist", len(EXPECTED_TABLES))
 
 
 def load_data(engine, processed_dir: str | None = None) -> None:
