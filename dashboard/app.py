@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine
 
-from dashboard.business_intelligence import render_business_intelligence_page
+from .dashboard.business_intelligence import render_business_intelligence_page
 from dashboard.components.ui import (
     inject_global_css,
     render_sidebar_branding,
