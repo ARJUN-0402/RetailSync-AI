@@ -37,11 +37,10 @@ def _init_session_state() -> None:
         st.session_state.chat_history = []
     if len(st.session_state.chat_history) > 50:
         st.session_state.chat_history = st.session_state.chat_history[-50:]
-    if len(st.session_state.chat_history) > 50:
-        st.session_state.chat_history = st.session_state.chat_history[-50:]
 
 
 def render_ai_analyst_page(data: dict) -> None:
+    _init_session_state()
     st.markdown(
         """
         <div class="brand-header">AI Analyst</div>

@@ -135,6 +135,10 @@ if "engine" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Overview"
 
+# Initialize session state for AI Analyst chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
 
 logger = setup_logging(__name__)
 
@@ -146,10 +150,6 @@ st.set_page_config(
 )
 
 inject_global_css()
-
-# Initialize session state for current page
-if "current_page" not in st.session_state:
-    st.session_state.current_page = "Overview"
 
 # Sidebar navigation
 render_sidebar_branding()

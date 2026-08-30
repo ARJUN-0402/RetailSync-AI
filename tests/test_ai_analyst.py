@@ -336,3 +336,89 @@ class TestGrounding:
         if "data" in result and result["data"]:
             for record in result["data"][:3]:
                 assert "forecast_demand_14d" in record or "product_id" in record
+
+
+# ============================================================
+# SESSION STATE INITIALIZATION TESTS
+# ============================================================
+
+
+class TestSessionStateInitialization:
+    def _fake_session_state(self, initial=None):
+        initial = initial or {}
+
+        class FakeSessionState(dict):
+            def __getattr__(self, name):
+                try:
+                    return self[name]
+                except KeyError:
+                    raise AttributeError(name)
+
+            def __setattr__(self, name, value):
+                self[name] = value
+
+            def __contains__(self, key):
+                return super().__contains__(key)
+
+        return FakeSessionState(initial)
+
+    def test_init_session_state_creates_empty_chat_history(self):
+        from dashboard.pages.ai_analyst import _init_session_state
+        from unittest.mock import patch
+
+        fake_state = self._fake_session_state()
+        with patch("streamlit.session_state", fake_state):
+            _init_session_state()
+            assert fake_state.chat_history == []
+
+    def test_init_session_state_preserves_existing_history(self):
+        from dashboard.pages.ai_analyst import _init_session_state
+        from unittest.mock import patch
+
+        existing = [{"role": "user", "content": "hello"}]
+        fake_state = self._fake_session_state({"chat_history": existing})
+        with patch("streamlit.session_state", fake_state):
+            _init_session_state()
+            assert fake_state.chat_history is existing
+            assert len(fake_state.chat_history) == 1
+
+    def test_init_session_state_caps_at_50_messages(self):
+        from dashboard.pages.ai_analyst import _init_session_state
+        from unittest.mock import patch
+
+        long_history = [{"role": "user", "content": f"msg{i}"} for i in range(60)]
+        fake_state = self._fake_session_state({"chat_history": long_history})
+        with patch("streamlit.session_state", fake_state):
+            _init_session_state()
+            assert len(fake_state.chat_history) == 50
+            assert fake_state.chat_history[0]["content"] == "msg10"
+
+    def test_render_ai_analyst_page_handles_missing_chat_history(self):
+        from dashboard.pages.ai_analyst import render_ai_analyst_page
+        from unittest.mock import patch, MagicMock
+
+        fake_state = self._fake_session_state()
+        mock_data = {"products": MagicMock()}
+
+        with patch("streamlit.session_state", fake_state):
+            with patch("dashboard.pages.ai_analyst.st") as mock_st:
+                mock_st.session_state = fake_state
+                mock_st.markdown = MagicMock()
+                mock_st.container = MagicMock(return_value=MagicMock(__enter__=MagicMock(return_value=None), __exit__=MagicMock()))
+                mock_st.columns = MagicMock(return_value=[MagicMock()])
+                mock_st.sidebar = MagicMock()
+                mock_st.button = MagicMock(return_value=False)
+                mock_st.chat_message = MagicMock(return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock()))
+                mock_st.chat_input = MagicMock(return_value=None)
+                mock_st.spinner = MagicMock(return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock()))
+
+                with patch("dashboard.pages.ai_analyst.AIAnalystConfig") as MockConfig:
+                    MockConfig.from_env.return_value = MagicMock(is_configured=False)
+                    with patch("dashboard.pages.ai_analyst.render_alert"):
+                        with patch("dashboard.pages.ai_analyst.render_section_header"):
+                            with patch("dashboard.components.ui.render_kpi_row"):
+                                with patch("dashboard.pages.ai_analyst.ask"):
+                                    render_ai_analyst_page(mock_data)
+
+            assert "chat_history" in fake_state
+            assert fake_state.chat_history == []
