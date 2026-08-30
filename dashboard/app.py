@@ -186,7 +186,7 @@ for group, pages in NAVIGATION.items():
         button_type = "primary" if st.session_state.current_page == page else "secondary"
         if st.sidebar.button(
             page, 
-            use_container_width=True, 
+            width="stretch", 
             type=button_type,
             key=f"nav_{page}"  # Unique key to avoid conflicts
         ):

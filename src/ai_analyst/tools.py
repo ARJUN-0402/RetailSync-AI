@@ -286,7 +286,7 @@ def get_inventory_snapshot(
     cols = [
         "product_id", "store_id", "warehouse_id", "quantity_on_hand",
         "reorder_point", "max_stock_level", "stockout_risk", "overstock_risk",
-        "reorder_urgency", "composite_risk_level", "recommended_action",
+        "reorder_urgency",         "composite_risk_score", "recommended_action",
     ]
     cols = [c for c in cols if c in df.columns]
     return {
@@ -418,7 +418,7 @@ def get_product_segments(cluster_label: str | None = None, product_id: str | Non
         df = df[df["product_id"] == product_id]
     if df.empty:
         return {"error": "No product segments match the filters."}
-    cols = ["product_id", "cluster", "cluster_label", "revenue_sum", "demand_cv_28d_mean"]
+    cols = ["product_id", "cluster", "cluster_label", "total_revenue", "demand_cv"]
     cols = [c for c in cols if c in df.columns]
     return {
         "data": df[cols].to_dict(orient="records"),
@@ -439,7 +439,7 @@ def get_store_segments(cluster_label: str | None = None, store_id: str | None = 
         df = df[df["store_id"] == store_id]
     if df.empty:
         return {"error": "No store segments match the filters."}
-    cols = ["store_id", "cluster", "cluster_label", "revenue_sum", "demand_cv_28d_mean"]
+    cols = ["store_id", "cluster", "cluster_label", "total_revenue", "demand_cv"]
     cols = [c for c in cols if c in df.columns]
     return {
         "data": df[cols].to_dict(orient="records"),
@@ -467,7 +467,7 @@ def get_warehouse_performance(
     cols = [
         "warehouse_id", "warehouse_name", "city", "state", "capacity_m3",
         "occupied_volume_m3", "utilization_pct", "capacity_risk",
-        "turnover_ratio", "cluster_label", "recommendation",
+        "inventory_turnover", "cluster_label", "recommendation",
     ]
     cols = [c for c in cols if c in df.columns]
     return {

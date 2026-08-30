@@ -378,7 +378,7 @@ def render_overview_page(data: dict, models: dict, engine) -> None:
                 key=f"nav_{idx}",
                 width="stretch",
             ):
-                st.session_state["nav_page"] = page_name
+                st.session_state.current_page = page_name
                 st.rerun()
 
     # ============================================================
