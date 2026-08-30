@@ -37,7 +37,7 @@ from src.utils.logging import setup_logging  # noqa: E402
 
 @st.cache_data(ttl=600)
 def load_data():
-    """Load all processed data and models into memory."""
+    """Load all processed CSV data into memory (pickleable, cached as data)."""
     # Resolve project root from dashboard app.py location
     dashboard_dir = Path(__file__).resolve().parent
     project_root = dashboard_dir.parent
@@ -74,6 +74,16 @@ def load_data():
     if not data:
         raise FileNotFoundError("Could not find processed CSV data in any expected location")
 
+    return data
+
+
+@st.cache_resource
+def load_models():
+    """Load all trained ML models (shared global resource, never pickled)."""
+    # Resolve project root from dashboard app.py location
+    dashboard_dir = Path(__file__).resolve().parent
+    project_root = dashboard_dir.parent
+
     # Load ML models - try multiple possible locations
     models_dirs = [
         project_root / "models",
@@ -98,11 +108,14 @@ def load_data():
     if not models:
         raise FileNotFoundError("Could not find model files in any expected location")
 
-    # Create database engine using the same root
-    database_path = str(_PROJECT_ROOT / "database" / "retailsync.db")
-    engine = create_engine(f"sqlite:///{database_path}")
+    return models
 
-    return data, models, engine
+
+@st.cache_resource
+def get_engine():
+    """Create and cache the shared SQLAlchemy engine (global resource)."""
+    database_path = str(_PROJECT_ROOT / "database" / "retailsync.db")
+    return create_engine(f"sqlite:///{database_path}")
 
 
 # Initialize session state for data/models/engine
@@ -112,11 +125,11 @@ if artifact_check["status"] != "healthy":
     raise FileNotFoundError(f"Missing deployment artifacts:\n{missing}")
 
 if "data" not in st.session_state:
-    st.session_state.data = load_data()[0]
+    st.session_state.data = load_data()
 if "models" not in st.session_state:
-    st.session_state.models = load_data()[1]
+    st.session_state.models = load_models()
 if "engine" not in st.session_state:
-    st.session_state.engine = load_data()[2]
+    st.session_state.engine = get_engine()
 
 # Initialize session state for current page
 if "current_page" not in st.session_state:
@@ -137,8 +150,6 @@ inject_global_css()
 # Initialize session state for current page
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Overview"
-
-# load_data
 
 # Sidebar navigation
 render_sidebar_branding()
