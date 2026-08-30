@@ -49,6 +49,10 @@ data/processed/*
 !data/processed/store_segments.csv
 !data/processed/warehouse_segments.csv
 !data/processed/warehouse_optimization.csv
+!data/processed/products.csv
+!data/processed/stores.csv
+!data/processed/suppliers.csv
+!data/processed/warehouses.csv
 *.db
 !database/retailsync.db
 *.sqlite

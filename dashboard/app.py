@@ -31,7 +31,7 @@ from dashboard.pages.overview import render_overview_page  # noqa: E402
 from dashboard.pages.segmentation import render_segmentation_page  # noqa: E402
 from dashboard.pages.warehouse import render_warehouse_page  # noqa: E402
 from src.config import settings  # noqa: E402, F401
-from src.health import get_health_status  # noqa: E402
+from src.health import get_health_status, validate_runtime_artifacts  # noqa: E402
 from src.utils.logging import setup_logging  # noqa: E402
 
 
@@ -106,6 +106,11 @@ def load_data():
 
 
 # Initialize session state for data/models/engine
+artifact_check = validate_runtime_artifacts()
+if artifact_check["status"] != "healthy":
+    missing = "\n".join(artifact_check["missing"])
+    raise FileNotFoundError(f"Missing deployment artifacts:\n{missing}")
+
 if "data" not in st.session_state:
     st.session_state.data = load_data()[0]
 if "models" not in st.session_state:

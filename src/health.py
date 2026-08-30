@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from src.config import settings
@@ -117,6 +118,10 @@ def check_data_files(processed_dir: str | None = None) -> dict[str, Any]:
         "store_segments.csv",
         "warehouse_segments.csv",
         "warehouse_optimization.csv",
+        "products.csv",
+        "stores.csv",
+        "suppliers.csv",
+        "warehouses.csv",
     ]
 
     result: dict[str, Any] = {
@@ -165,6 +170,74 @@ def check_configuration() -> dict[str, Any]:
     if result["issues"]:
         result["status"] = "degraded"
         result["error"] = "; ".join(result["issues"])
+
+    return result
+
+
+def validate_runtime_artifacts() -> dict[str, Any]:
+    """Validate that all required deployment artifacts are present.
+
+    Returns:
+        Dict with status, present artifacts, and missing artifacts with
+        specific file paths for deployment diagnostics.
+    """
+    from src.config import settings
+
+    processed_dir = settings.paths.processed_data
+    models_dir = settings.paths.models
+    database_path = settings.database.path
+
+    required_data = [
+        "features_daily.csv",
+        "forecasts_next_14d.csv",
+        "inventory_intelligence.csv",
+        "anomalies.csv",
+        "product_segments.csv",
+        "store_segments.csv",
+        "warehouse_segments.csv",
+        "warehouse_optimization.csv",
+        "products.csv",
+        "stores.csv",
+        "suppliers.csv",
+        "warehouses.csv",
+    ]
+
+    required_models = [
+        "demand_forecaster.pkl",
+        "product_clusterer.pkl",
+        "store_clusterer.pkl",
+        "warehouse_clusterer.pkl",
+    ]
+
+    result: dict[str, Any] = {
+        "status": "healthy",
+        "processed_dir": str(processed_dir),
+        "models_dir": str(models_dir),
+        "database_path": str(database_path),
+        "missing": [],
+    }
+
+    if not processed_dir.exists():
+        result["status"] = "unhealthy"
+        result["missing"].append(f"Processed data directory not found: {processed_dir}")
+    else:
+        for fname in required_data:
+            if not (processed_dir / fname).exists():
+                result["status"] = "unhealthy"
+                result["missing"].append(f"Missing deployment artifact: {processed_dir / fname}")
+
+    if not models_dir.exists():
+        result["status"] = "unhealthy"
+        result["missing"].append(f"Models directory not found: {models_dir}")
+    else:
+        for fname in required_models:
+            if not (models_dir / fname).exists():
+                result["status"] = "unhealthy"
+                result["missing"].append(f"Missing deployment artifact: {models_dir / fname}")
+
+    if not Path(database_path).exists():
+        result["status"] = "unhealthy"
+        result["missing"].append(f"Missing deployment artifact: {database_path}")
 
     return result
 
