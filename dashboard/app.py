@@ -21,15 +21,15 @@ from dashboard.components.ui import (  # noqa: E402
     render_sidebar_footer,
 )  # noqa: E402
 from dashboard.explainability_page import render_explainability_page  # noqa: E402
-from dashboard.pages.anomalies import render_anomalies_page  # noqa: E402
-from dashboard.pages.ai_analyst import render_ai_analyst_page  # noqa: E402
-from dashboard.pages.data_explorer import render_data_explorer_page  # noqa: E402
-from dashboard.pages.demand_forecast import render_demand_forecast_page  # noqa: E402
-from dashboard.pages.inventory import render_inventory_page  # noqa: E402
-from dashboard.pages.model_performance import render_model_performance_page  # noqa: E402
-from dashboard.pages.overview import render_overview_page  # noqa: E402
-from dashboard.pages.segmentation import render_segmentation_page  # noqa: E402
-from dashboard.pages.warehouse import render_warehouse_page  # noqa: E402
+from dashboard.src_pages.anomalies import render_anomalies_page  # noqa: E402
+from dashboard.src_pages.ai_analyst import render_ai_analyst_page  # noqa: E402
+from dashboard.src_pages.data_explorer import render_data_explorer_page  # noqa: E402
+from dashboard.src_pages.demand_forecast import render_demand_forecast_page  # noqa: E402
+from dashboard.src_pages.inventory import render_inventory_page  # noqa: E402
+from dashboard.src_pages.model_performance import render_model_performance_page  # noqa: E402
+from dashboard.src_pages.overview import render_overview_page  # noqa: E402
+from dashboard.src_pages.segmentation import render_segmentation_page  # noqa: E402
+from dashboard.src_pages.warehouse import render_warehouse_page  # noqa: E402
 from src.config import settings  # noqa: E402, F401
 from src.health import get_health_status, validate_runtime_artifacts  # noqa: E402
 from src.utils.logging import setup_logging  # noqa: E402

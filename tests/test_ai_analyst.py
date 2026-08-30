@@ -363,7 +363,7 @@ class TestSessionStateInitialization:
         return FakeSessionState(initial)
 
     def test_init_session_state_creates_empty_chat_history(self):
-        from dashboard.pages.ai_analyst import _init_session_state
+        from dashboard.src_pages.ai_analyst import _init_session_state
         from unittest.mock import patch
 
         fake_state = self._fake_session_state()
@@ -372,7 +372,7 @@ class TestSessionStateInitialization:
             assert fake_state.chat_history == []
 
     def test_init_session_state_preserves_existing_history(self):
-        from dashboard.pages.ai_analyst import _init_session_state
+        from dashboard.src_pages.ai_analyst import _init_session_state
         from unittest.mock import patch
 
         existing = [{"role": "user", "content": "hello"}]
@@ -383,7 +383,7 @@ class TestSessionStateInitialization:
             assert len(fake_state.chat_history) == 1
 
     def test_init_session_state_caps_at_50_messages(self):
-        from dashboard.pages.ai_analyst import _init_session_state
+        from dashboard.src_pages.ai_analyst import _init_session_state
         from unittest.mock import patch
 
         long_history = [{"role": "user", "content": f"msg{i}"} for i in range(60)]
@@ -394,14 +394,14 @@ class TestSessionStateInitialization:
             assert fake_state.chat_history[0]["content"] == "msg10"
 
     def test_render_ai_analyst_page_handles_missing_chat_history(self):
-        from dashboard.pages.ai_analyst import render_ai_analyst_page
+        from dashboard.src_pages.ai_analyst import render_ai_analyst_page
         from unittest.mock import patch, MagicMock
 
         fake_state = self._fake_session_state()
         mock_data = {"products": MagicMock()}
 
         with patch("streamlit.session_state", fake_state):
-            with patch("dashboard.pages.ai_analyst.st") as mock_st:
+            with patch("dashboard.src_pages.ai_analyst.st") as mock_st:
                 mock_st.session_state = fake_state
                 mock_st.markdown = MagicMock()
                 mock_st.container = MagicMock(return_value=MagicMock(__enter__=MagicMock(return_value=None), __exit__=MagicMock()))
@@ -412,12 +412,12 @@ class TestSessionStateInitialization:
                 mock_st.chat_input = MagicMock(return_value=None)
                 mock_st.spinner = MagicMock(return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock()))
 
-                with patch("dashboard.pages.ai_analyst.AIAnalystConfig") as MockConfig:
+                with patch("dashboard.src_pages.ai_analyst.AIAnalystConfig") as MockConfig:
                     MockConfig.from_env.return_value = MagicMock(is_configured=False)
-                    with patch("dashboard.pages.ai_analyst.render_alert"):
-                        with patch("dashboard.pages.ai_analyst.render_section_header"):
+                    with patch("dashboard.src_pages.ai_analyst.render_alert"):
+                        with patch("dashboard.src_pages.ai_analyst.render_section_header"):
                             with patch("dashboard.components.ui.render_kpi_row"):
-                                with patch("dashboard.pages.ai_analyst.ask"):
+                                with patch("dashboard.src_pages.ai_analyst.ask"):
                                     render_ai_analyst_page(mock_data)
 
             assert "chat_history" in fake_state
