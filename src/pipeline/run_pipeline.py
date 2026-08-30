@@ -136,13 +136,13 @@ store_segments = pd.read_csv("data/processed/store_segments.csv")
 warehouse_segments = pd.read_csv("data/processed/warehouse_segments.csv")
 print("\nSegments:")
 print(
-    f"  Products: {len(product_segments)} ({product_segments['product_cluster_label'].value_counts().to_dict()})"
+    f"  Products: {len(product_segments)} ({product_segments['cluster_label'].value_counts().to_dict()})"
 )
 print(
-    f"  Stores: {len(store_segments)} ({store_segments['store_cluster_label'].value_counts().to_dict()})"
+    f"  Stores: {len(store_segments)} ({store_segments['cluster_label'].value_counts().to_dict()})"
 )
 print(
-    f"  Warehouses: {len(warehouse_segments)} ({warehouse_segments['warehouse_cluster_label'].value_counts().to_dict()})"
+    f"  Warehouses: {len(warehouse_segments)} ({warehouse_segments['cluster_label'].value_counts().to_dict()})"
 )
 
 wh_opt = pd.read_csv("data/processed/warehouse_optimization.csv")
@@ -183,19 +183,19 @@ insights = {
     },
     "segmentation": {
         "product_clusters": {
-            "k": product_segments["product_cluster"].nunique() if "product_cluster" in product_segments.columns else 0,
+            "k": product_segments["cluster"].nunique() if "cluster" in product_segments.columns else 0,
             "silhouette": 0.0,
-            "labels": product_segments["product_cluster_label"].value_counts().to_dict() if "product_cluster_label" in product_segments.columns else {},
+            "labels": product_segments["cluster_label"].value_counts().to_dict() if "cluster_label" in product_segments.columns else {},
         },
         "store_clusters": {
-            "k": store_segments["store_cluster"].nunique() if "store_cluster" in store_segments.columns else 0,
+            "k": store_segments["cluster"].nunique() if "cluster" in store_segments.columns else 0,
             "silhouette": 0.0,
-            "labels": store_segments["store_cluster_label"].value_counts().to_dict() if "store_cluster_label" in store_segments.columns else {},
+            "labels": store_segments["cluster_label"].value_counts().to_dict() if "cluster_label" in store_segments.columns else {},
         },
         "warehouse_clusters": {
-            "k": warehouse_segments["warehouse_cluster"].nunique() if "warehouse_cluster" in warehouse_segments.columns else 0,
+            "k": warehouse_segments["cluster"].nunique() if "cluster" in warehouse_segments.columns else 0,
             "silhouette": 0.0,
-            "labels": warehouse_segments["warehouse_cluster_label"].value_counts().to_dict() if "warehouse_cluster_label" in warehouse_segments.columns else {},
+            "labels": warehouse_segments["cluster_label"].value_counts().to_dict() if "cluster_label" in warehouse_segments.columns else {},
         },
     },
     "warehouse": {

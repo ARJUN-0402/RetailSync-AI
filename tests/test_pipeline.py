@@ -284,8 +284,8 @@ def test_clustering():
     assert os.path.exists(prod_path), f"Product segments missing: {prod_path}"
     df = pd.read_csv(prod_path)
     assert len(df) > 0, "Product segments DataFrame is empty"
-    assert "cluster" in df.columns or "product_cluster" in df.columns, (
-        "Missing cluster column in product segments"
+    assert "cluster" in df.columns and "cluster_label" in df.columns, (
+        "Missing cluster/cluster_label columns in product segments"
     )
     # Products should be exactly 50
     assert len(df) == 50, f"Expected 50 products, got {len(df)}"

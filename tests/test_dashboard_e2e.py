@@ -166,9 +166,7 @@ def main():
     print(f"  [OK] High-risk alerts: {len(high_alerts)}")
 
     # Segmentation page: cluster counts
-    product_clusters = data["product_segments"].get(
-        "cluster", data["product_segments"].get("product_cluster")
-    )
+    product_clusters = data["product_segments"]["cluster"]
     print(
         f"  [OK] Product cluster counts:\n{product_clusters.value_counts().to_dict()}"
     )

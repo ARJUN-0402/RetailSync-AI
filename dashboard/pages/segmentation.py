@@ -57,7 +57,7 @@ def render_product_segmentation(df: pd.DataFrame | None, products: pd.DataFrame 
         render_empty_state("No Data", "Product segmentation data is not available.")
         return
 
-    label_counts = df["product_cluster_label"].value_counts().reset_index()
+    label_counts = df["cluster_label"].value_counts().reset_index()
     label_counts.columns = ["cluster", "count"]
 
     col1, col2 = st.columns(2)
@@ -69,19 +69,19 @@ def render_product_segmentation(df: pd.DataFrame | None, products: pd.DataFrame 
             title="Product Cluster Distribution",
         )
     with col2:
-        if "quantity_sold_sum" in df.columns and "demand_cv_28d_mean" in df.columns:
+        if "total_revenue" in df.columns and "demand_cv" in df.columns:
             fig = px.scatter(
                 df,
-                x="quantity_sold_sum",
-                y="demand_cv_28d_mean",
-                color="product_cluster_label",
+                x="total_revenue",
+                y="demand_cv",
+                color="cluster_label",
                 title="Product Segments (Revenue vs Variability)",
                 template="plotly_dark",
                 height=400,
             )
             fig.update_layout(
-                xaxis_title="Total Quantity Sold",
-                yaxis_title="Demand CV (28d Mean)",
+                xaxis_title="Total Revenue",
+                yaxis_title="Demand CV",
             )
             st.plotly_chart(fig, width="stretch")
         else:
@@ -102,7 +102,7 @@ def render_store_segmentation(df: pd.DataFrame | None, stores: pd.DataFrame | No
         render_empty_state("No Data", "Store segmentation data is not available.")
         return
 
-    label_counts = df["store_cluster_label"].value_counts().reset_index()
+    label_counts = df["cluster_label"].value_counts().reset_index()
     label_counts.columns = ["cluster", "count"]
 
     col1, col2 = st.columns(2)
@@ -114,13 +114,13 @@ def render_store_segmentation(df: pd.DataFrame | None, stores: pd.DataFrame | No
             title="Store Cluster Distribution",
         )
     with col2:
-        if stores is not None and not stores.empty and "revenue_sum" in df.columns:
+        if stores is not None and not stores.empty and "total_revenue" in df.columns:
             store_segs = df.merge(stores[["store_id", "city", "state"]], on="store_id", how="left")
             fig = px.bar(
                 store_segs,
-                x="store_cluster_label",
-                y="revenue_sum",
-                color="store_cluster_label",
+                x="cluster_label",
+                y="total_revenue",
+                color="cluster_label",
                 title="Revenue by Store Cluster",
                 template="plotly_dark",
                 height=400,
@@ -149,7 +149,7 @@ def render_warehouse_segmentation(df: pd.DataFrame | None, warehouses: pd.DataFr
         render_empty_state("No Data", "Warehouse segmentation data is not available.")
         return
 
-    label_counts = df["warehouse_cluster_label"].value_counts().reset_index()
+    label_counts = df["cluster_label"].value_counts().reset_index()
     label_counts.columns = ["cluster", "count"]
 
     col1, col2 = st.columns(2)
@@ -161,20 +161,20 @@ def render_warehouse_segmentation(df: pd.DataFrame | None, warehouses: pd.DataFr
             title="Warehouse Cluster Distribution",
         )
     with col2:
-        if warehouses is not None and not warehouses.empty and "revenue_sum" in df.columns:
+        if warehouses is not None and not warehouses.empty and "total_quantity" in df.columns:
             wh_segs = df.merge(warehouses[["warehouse_id", "city", "state"]], on="warehouse_id", how="left")
             fig = px.bar(
                 wh_segs,
-                x="warehouse_cluster_label",
-                y="revenue_sum",
-                color="warehouse_cluster_label",
-                title="Revenue by Warehouse Cluster",
+                x="cluster_label",
+                y="total_quantity",
+                color="cluster_label",
+                title="Quantity by Warehouse Cluster",
                 template="plotly_dark",
                 height=400,
             )
             fig.update_layout(
                 xaxis_title="Warehouse Cluster",
-                yaxis_title="Total Revenue",
+                yaxis_title="Total Quantity",
                 showlegend=False,
             )
             st.plotly_chart(fig, width="stretch")
